@@ -162,9 +162,21 @@
         /* ===== GROUNDING INTRO (climate-anxiety framing, not a weather headline) ===== */
         .intro-panel {
             padding: 26px 30px; margin-bottom: 16px; display: flex; align-items: center;
-            justify-content: space-between; gap: 22px; flex-wrap: wrap;
+            justify-content: space-between; gap: 22px; flex-wrap: wrap; position: relative;
             background: linear-gradient(120deg, var(--accent-soft), transparent 70%), var(--panel);
         }
+        .intro-dismiss {
+            position: absolute; top: 14px; right: 16px; background: transparent; border: none;
+            color: var(--text-muted); font-size: 15px; cursor: pointer; padding: 4px 7px; line-height: 1;
+            border-radius: 6px;
+        }
+        .intro-dismiss:hover { color: var(--text); background: var(--hairline); }
+        .intro-reopen {
+            display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--hairline);
+            border-radius: 999px; padding: 9px 16px; font-size: 12.5px; font-weight: 600; color: var(--primary);
+            cursor: pointer; margin-bottom: 16px; font-family: var(--f-body);
+        }
+        .intro-reopen:hover { border-color: var(--accent); color: var(--accent); }
         .intro-copy { max-width: 620px; }
         .intro-title {
             font-family: var(--f-display); font-size: 26px; font-weight: 600; color: var(--primary);
@@ -296,6 +308,33 @@
 
         /* ===== GRID CARDS ===== */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(252px, 1fr)); gap: 14px; }
+        .subtabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--hairline); }
+        .subtab-btn {
+            display: flex; align-items: center; gap: 7px; background: transparent; border: none;
+            border-bottom: 2px solid transparent; padding: 11px 4px; margin-bottom: -1px;
+            font-family: var(--f-body); font-size: 13.5px; font-weight: 600; color: var(--text-muted);
+            cursor: pointer; transition: color 0.2s, border-color 0.2s;
+        }
+        .subtab-btn + .subtab-btn { margin-left: 14px; }
+        .subtab-icon { font-size: 13px; }
+        .subtab-btn:hover { color: var(--text); }
+        .subtab-btn.active { color: var(--primary); border-bottom-color: var(--accent); }
+        .subview { display: none; }
+        .subview.active { display: block; animation: subviewFade 0.25s ease; }
+        @keyframes subviewFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 700px) {
+            .subtabs { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+            .subtab-btn span.subtab-icon { display: none; }
+        }
+        .solution-toggle {
+            font-family: var(--f-mono); font-size: 10.5px; color: var(--accent); cursor: pointer;
+            margin-top: 6px; display: inline-block; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .solution-text.collapsed { max-height: 22px; overflow: hidden; position: relative; }
+        .solution-text.collapsed::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 14px;
+            background: linear-gradient(transparent, var(--panel-solid));
+        }
         .card {
             background: var(--panel); backdrop-filter: blur(16px);
             border-radius: var(--radius); padding: 20px 22px;
@@ -494,6 +533,13 @@
         }
         .chat-title { font-family: var(--f-display); font-size: 18px; font-weight: 600; color: var(--primary); }
         .chat-sub { font-size: 11.5px; color: var(--text-muted); font-family: var(--f-mono); margin-top: 3px; }
+        .chat-header-brand { display: flex; align-items: center; gap: 12px; }
+        .chat-logo-full {
+            width: 84px; height: 84px; flex-shrink: 0; background: #fff; border-radius: 12px;
+            border: 1px solid var(--hairline-strong); overflow: hidden; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .chat-logo-full img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
         .chat-key-row { display: flex; align-items: center; gap: 6px; }
         .chat-key-row input {
             font-family: var(--f-mono); font-size: 11.5px; padding: 7px 10px; border-radius: var(--radius-sm);
@@ -552,6 +598,96 @@
             text-align: center; font-size: 10px; color: var(--text-muted); font-family: var(--f-mono);
             margin-top: 12px;
         }
+
+        /* ===== HEALTH WARNINGS LIST (in AI Assessment) ===== */
+        .ai-warnings { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+        .ai-warning-item {
+            display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+            border-radius: var(--radius-sm); border: 1px solid var(--hairline); background: var(--panel-solid);
+            font-size: 12.5px; line-height: 1.55; color: var(--text-secondary);
+        }
+        .ai-warning-item.moderate { border-color: rgba(208,161,63,0.4); background: rgba(208,161,63,0.07); }
+        .ai-warning-item.unhealthy { border-color: rgba(205,108,72,0.4); background: rgba(205,108,72,0.07); }
+        .ai-warning-item.severe { border-color: rgba(138,107,176,0.4); background: rgba(138,107,176,0.08); }
+        .ai-warning-icon { font-size: 15px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+        .ai-warning-item b { color: var(--text); }
+        .ai-warning-item .personal-tag {
+            display: inline-block; margin-top: 5px; font-family: var(--f-mono); font-size: 9.5px;
+            text-transform: uppercase; letter-spacing: 0.6px; color: var(--accent);
+        }
+
+        /* ===== MEDICAL SYNC PILL + MODAL ===== */
+        .medsync-pill {
+            display: flex; align-items: center; gap: 7px; background: var(--panel);
+            backdrop-filter: blur(10px); padding: 7px 13px; border-radius: var(--radius-sm);
+            font-size: 10.5px; color: var(--primary); font-weight: 600; cursor: pointer;
+            border: 1px solid var(--hairline); font-family: var(--f-mono);
+            text-transform: uppercase; letter-spacing: 0.8px; transition: all 0.2s;
+        }
+        .medsync-pill:hover { border-color: var(--accent); color: var(--accent); }
+        .medsync-pill.synced { color: var(--good); border-color: rgba(79,157,110,0.4); }
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(10,14,20,0.55); backdrop-filter: blur(3px);
+            z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-card {
+            background: var(--panel-solid); border-radius: var(--radius); border: 1px solid var(--hairline);
+            box-shadow: var(--shadow); max-width: 460px; width: 100%; max-height: 86vh; overflow-y: auto;
+            padding: 26px;
+        }
+        .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+        .modal-title { font-family: var(--f-display); font-size: 20px; font-weight: 600; color: var(--primary); }
+        .modal-close {
+            background: transparent; border: none; font-size: 18px; color: var(--text-muted); cursor: pointer;
+            line-height: 1; padding: 2px 6px;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-sub { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 18px; }
+        .premium-lock {
+            text-align: center; padding: 22px 10px; border: 1px dashed var(--hairline-strong);
+            border-radius: var(--radius-sm); background: var(--accent-soft);
+        }
+        .premium-lock .pl-icon { font-size: 26px; margin-bottom: 8px; }
+        .premium-lock .pl-text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+        .premium-unlock-btn {
+            background: var(--primary); color: var(--bg-1); border: none; border-radius: 999px;
+            padding: 11px 22px; font-family: var(--f-body); font-weight: 600; font-size: 13px; cursor: pointer;
+        }
+        .premium-unlock-btn:hover { opacity: 0.88; }
+        .medform-group { margin-bottom: 16px; }
+        .medform-label {
+            font-size: 10.5px; font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.8px;
+            color: var(--text-muted); margin-bottom: 9px; display: block;
+        }
+        .medform-check-list { display: flex; flex-direction: column; gap: 9px; }
+        .medform-check {
+            display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--text); cursor: pointer;
+        }
+        .medform-check input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+        .medform-age {
+            width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--hairline);
+            background: var(--bg-1); color: var(--text); font-family: var(--f-body); font-size: 13px; outline: none;
+        }
+        .medform-age:focus { border-color: var(--accent); }
+        .medform-save-btn {
+            width: 100%; background: var(--primary); color: var(--bg-1); border: none; border-radius: var(--radius-sm);
+            padding: 12px; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 6px;
+        }
+        .medform-save-btn:hover { opacity: 0.88; }
+        .medform-disclaimer {
+            font-size: 10.5px; color: var(--text-muted); line-height: 1.6; margin-top: 12px; text-align: center;
+        }
+        .medform-synced-note {
+            display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--good);
+            background: rgba(79,157,110,0.1); border: 1px solid rgba(79,157,110,0.3);
+            border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 16px;
+        }
+        .medform-clear-btn {
+            background: transparent; border: 1px solid var(--hairline-strong); color: var(--text-muted);
+            border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; cursor: pointer; margin-top: 8px; width: 100%;
+        }
+        .medform-clear-btn:hover { border-color: var(--unhealthy); color: var(--unhealthy); }
     </style>
 </head>
 <body>
@@ -609,6 +745,7 @@
                     <div class="search-suggestions" id="citySuggestions"></div>
                 </div>
                 <div class="loc-pill" id="locPill" onclick="useMyLocation()" title="Click to use your current location">📍 Detecting…</div>
+                <div class="medsync-pill" id="medSyncPill" onclick="openMedicalModal()" title="Personalize warnings with your health profile">🩺 Medical Sync</div>
                 <div class="live-pill"><div class="live-dot"></div> Live</div>
                 <button class="icon-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh">↻</button>
                 <button class="icon-btn" onclick="toggleDark()" title="Toggle theme">◐</button>
@@ -621,8 +758,23 @@
             <button onclick="dismissError()" style="margin-left:6px;background:transparent;color:var(--unhealthy);border:1px solid var(--unhealthy);border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer;">Dismiss</button>
         </div>
 
+        <!-- Dashboard sub-tabs: split what used to be one long scroll into pages -->
+        <div class="subtabs">
+            <button class="subtab-btn active" id="subtabOverview" onclick="showDashboardTab('overview')">
+                <span class="subtab-icon">🏠</span> Overview
+            </button>
+            <button class="subtab-btn" id="subtabEnvironment" onclick="showDashboardTab('environment')">
+                <span class="subtab-icon">🌫️</span> Environment Signals
+            </button>
+            <button class="subtab-btn" id="subtabForecast" onclick="showDashboardTab('forecast')">
+                <span class="subtab-icon">📅</span> 7-Day Forecast
+            </button>
+        </div>
+
         <!-- Grounding intro: reframes the page around climate anxiety, not just weather -->
-        <div class="panel intro-panel">
+        <div class="subview active" id="subOverview">
+        <div class="panel intro-panel" id="introPanel">
+            <button class="intro-dismiss" onclick="dismissIntro()" title="Hide this">✕</button>
             <div class="intro-copy">
                 <div class="eyebrow">A space to stay informed, without the overwhelm</div>
                 <h1 class="intro-title">Know what's happening. Feel less alone in it.</h1>
@@ -636,6 +788,7 @@
                 <span>💬</span> Talk it through with Cloude
             </button>
         </div>
+        <button class="intro-reopen" id="introReopen" onclick="reopenIntro()" style="display:none;">💬 Talk it through with Cloude</button>
 
         <!-- Hero -->
         <div class="hero">
@@ -666,6 +819,7 @@
                 <div class="ai-narrative" id="aiNarrative">
                     Cloude's model is synthesizing live air quality, heat, and UV signals for your area…
                 </div>
+                <div class="ai-warnings" id="aiWarnings"></div>
                 <div class="hero-details">
                     <div class="hero-detail">
                         <div class="d-label">Humidity</div>
@@ -676,20 +830,8 @@
                         <div class="d-value" id="heroWind">-- km/h</div>
                     </div>
                     <div class="hero-detail">
-                        <div class="d-label">Visibility</div>
-                        <div class="d-value" id="heroVis">-- km</div>
-                    </div>
-                    <div class="hero-detail">
-                        <div class="d-label">Pressure</div>
-                        <div class="d-value" id="heroPress">-- hPa</div>
-                    </div>
-                    <div class="hero-detail">
                         <div class="d-label">Precipitation</div>
                         <div class="d-value" id="heroPrecip">-- mm</div>
-                    </div>
-                    <div class="hero-detail">
-                        <div class="d-label">Cloud Cover</div>
-                        <div class="d-value" id="heroCloud">--%</div>
                     </div>
                 </div>
             </div>
@@ -716,22 +858,32 @@
                 <div class="horizon-sub" id="horizonSub">—</div>
             </div>
         </div>
+        </div><!-- /subOverview -->
 
         <!-- 7-Day Forecast -->
+        <div class="subview" id="subForecast">
         <div class="section-title">
             <span class="st-main">7-Day Model Forecast</span>
             <span class="st-line"></span>
             <span class="st-tag">Trace · Max/Min</span>
         </div>
         <div class="forecast-row" id="forecastRow"></div>
+        </div><!-- /subForecast -->
 
         <!-- Environment Cards -->
+        <div class="subview" id="subEnvironment">
         <div class="section-title">
-            <span class="st-main">Environment Signals, Analyzed</span>
+            <span class="st-main">Key Signals</span>
             <span class="st-line"></span>
             <span class="st-tag" id="updateTagline">—</span>
         </div>
-        <div class="grid" id="envGrid"></div>
+        <div class="grid" id="envGridKey"></div>
+        <div class="section-title" style="margin-top:22px;">
+            <span class="st-main">More Environmental Signals</span>
+            <span class="st-line"></span>
+        </div>
+        <div class="grid" id="envGridMore"></div>
+        </div><!-- /subEnvironment -->
 
         <!-- Footer -->
         <div class="footer">
@@ -746,9 +898,12 @@
         <div class="chat-wrap">
             <div class="chat-panel">
                 <div class="chat-header">
-                    <div>
-                        <div class="chat-title">Climate Companion</div>
-                        <div class="chat-sub">A space to talk through eco-anxiety · Project REACH</div>
+                    <div class="chat-header-brand">
+                        <div class="chat-logo-full"><img src="data:image/jpeg;base64,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" alt="Cloudee the chatbot logo"></div>
+                        <div>
+                            <div class="chat-title">Climate Companion</div>
+                            <div class="chat-sub">A space to talk through eco-anxiety · Project REACH</div>
+                        </div>
                     </div>
                     <div class="chat-key-row">
                         <input type="password" id="grokApiKey" placeholder="xai-••••••••••••••••••••••••••••" autocomplete="off">
@@ -782,6 +937,56 @@
             <div class="chat-disclaimer">
                 Climate Companion is a supportive space, not a substitute for professional mental health care.
                 Your API key is kept only in this browser tab and is never stored or sent anywhere but x.ai.
+            </div>
+        </div>
+    </div>
+
+    <!-- Medical History Sync — Premium -->
+    <div class="modal-overlay" id="medModalOverlay" onclick="if(event.target===this)closeMedicalModal()">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🩺 Medical History Sync</div>
+                <button class="modal-close" onclick="closeMedicalModal()">✕</button>
+            </div>
+            <div class="modal-sub">
+                Personalize your health warnings by telling Cloude about relevant conditions.
+                The AI Assessment and protection tips adjust to flag risks that matter more for you specifically.
+            </div>
+
+            <div id="medModalLocked">
+                <div class="premium-lock">
+                    <div class="pl-icon">🔒</div>
+                    <div class="pl-text">Medical History Sync is a <b>Premium</b> feature.<br>Unlock it to personalize today's warnings.</div>
+                    <button class="premium-unlock-btn" onclick="unlockPremiumDemo()">Unlock Premium (Demo)</button>
+                </div>
+            </div>
+
+            <div id="medModalForm" style="display:none;">
+                <div class="medform-synced-note" id="medSyncedNote" style="display:none;">
+                    ✓ Profile synced — warnings and tips below are now personalized for you.
+                </div>
+                <div class="medform-group">
+                    <label class="medform-label">Age</label>
+                    <input type="number" id="medAge" class="medform-age" placeholder="Optional — e.g. 34" min="0" max="120">
+                </div>
+                <div class="medform-group">
+                    <label class="medform-label">Relevant Conditions</label>
+                    <div class="medform-check-list">
+                        <label class="medform-check"><input type="checkbox" id="medAsthma"> Asthma / respiratory condition</label>
+                        <label class="medform-check"><input type="checkbox" id="medHeart"> Heart / cardiovascular condition</label>
+                        <label class="medform-check"><input type="checkbox" id="medPregnant"> Pregnant</label>
+                        <label class="medform-check"><input type="checkbox" id="medAllergy"> Pollen / seasonal allergies</label>
+                        <label class="medform-check"><input type="checkbox" id="medSkin"> Sun-sensitive skin / history of sunburn issues</label>
+                        <label class="medform-check"><input type="checkbox" id="medOutdoor"> Works or exercises outdoors regularly</label>
+                        <label class="medform-check"><input type="checkbox" id="medElderly"> 65+ or immunocompromised</label>
+                    </div>
+                </div>
+                <button class="medform-save-btn" onclick="saveMedicalProfile()">Save & Personalize</button>
+                <button class="medform-clear-btn" id="medClearBtn" style="display:none;" onclick="clearMedicalProfile()">Clear my health profile</button>
+                <div class="medform-disclaimer">
+                    Stored only in this browser tab for this session — never saved to a server or sent anywhere.
+                    This isn't medical advice; for real health concerns, talk to a clinician.
+                </div>
             </div>
         </div>
     </div>
@@ -916,6 +1121,7 @@ function renderAIAssessment(weather, airQuality) {
     document.getElementById('aiScoreLabel').textContent = a.label;
     document.getElementById('aiScoreLabel').style.color = a.color;
     document.getElementById('aiNarrative').innerHTML = a.narrative;
+    renderHealthWarnings();
 }
 
 function getPrecipStatus(p) {
@@ -960,6 +1166,192 @@ function getDailyAvg(hourlyTimes, hourlyValues, dateStr) {
         }
     }
     return count ? sum / count : null;
+}
+
+// ===================== DASHBOARD SUB-TABS =====================
+function showDashboardTab(tab) {
+    const tabs = { overview: 'subOverview', environment: 'subEnvironment', forecast: 'subForecast' };
+    Object.values(tabs).forEach(id => document.getElementById(id).classList.remove('active'));
+    document.getElementById(tabs[tab]).classList.add('active');
+    ['Overview','Environment','Forecast'].forEach(name => {
+        document.getElementById('subtab' + name).classList.toggle('active', name.toLowerCase() === tab);
+    });
+    try { localStorage.setItem('cloude_dashboard_tab', tab); } catch (e) {}
+}
+(function initDashboardTab() {
+    let saved = 'overview';
+    try { saved = localStorage.getItem('cloude_dashboard_tab') || 'overview'; } catch (e) {}
+    if (saved !== 'overview') {
+        document.addEventListener('DOMContentLoaded', () => showDashboardTab(saved));
+    }
+})();
+
+// ===================== INTRO PANEL (dismissible) =====================
+function dismissIntro() {
+    document.getElementById('introPanel').style.display = 'none';
+    document.getElementById('introReopen').style.display = 'flex';
+    try { localStorage.setItem('cloude_intro_dismissed', '1'); } catch (e) {}
+}
+function reopenIntro() {
+    document.getElementById('introPanel').style.display = 'flex';
+    document.getElementById('introReopen').style.display = 'none';
+    try { localStorage.removeItem('cloude_intro_dismissed'); } catch (e) {}
+}
+(function initIntroState() {
+    try {
+        if (localStorage.getItem('cloude_intro_dismissed') === '1') {
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('introPanel').style.display = 'none';
+                document.getElementById('introReopen').style.display = 'flex';
+            });
+        }
+    } catch (e) {}
+})();
+
+// ===================== MEDICAL HISTORY SYNC (Premium) =====================
+let premiumUnlocked = false;
+let medicalProfile = null; // session-only, in memory: { age, asthma, heart, pregnant, allergy, skin, outdoor, elderly }
+
+function openMedicalModal() {
+    document.getElementById('medModalOverlay').classList.add('show');
+}
+function closeMedicalModal() {
+    document.getElementById('medModalOverlay').classList.remove('show');
+}
+function unlockPremiumDemo() {
+    premiumUnlocked = true;
+    document.getElementById('medModalLocked').style.display = 'none';
+    document.getElementById('medModalForm').style.display = 'block';
+}
+function saveMedicalProfile() {
+    medicalProfile = {
+        age: document.getElementById('medAge').value ? parseInt(document.getElementById('medAge').value, 10) : null,
+        asthma: document.getElementById('medAsthma').checked,
+        heart: document.getElementById('medHeart').checked,
+        pregnant: document.getElementById('medPregnant').checked,
+        allergy: document.getElementById('medAllergy').checked,
+        skin: document.getElementById('medSkin').checked,
+        outdoor: document.getElementById('medOutdoor').checked,
+        elderly: document.getElementById('medElderly').checked
+    };
+    document.getElementById('medSyncedNote').style.display = 'flex';
+    document.getElementById('medClearBtn').style.display = 'block';
+    const pill = document.getElementById('medSyncPill');
+    pill.textContent = '🩺 Synced';
+    pill.classList.add('synced');
+    closeMedicalModal();
+    if (cachedWeather && cachedAir) {
+        renderAIAssessment(cachedWeather, cachedAir);
+        renderEnvGrid(cachedWeather, cachedAir);
+    }
+}
+function clearMedicalProfile() {
+    medicalProfile = null;
+    document.getElementById('medAge').value = '';
+    ['medAsthma','medHeart','medPregnant','medAllergy','medSkin','medOutdoor','medElderly'].forEach(id => {
+        document.getElementById(id).checked = false;
+    });
+    document.getElementById('medSyncedNote').style.display = 'none';
+    document.getElementById('medClearBtn').style.display = 'none';
+    const pill = document.getElementById('medSyncPill');
+    pill.textContent = '🩺 Medical Sync';
+    pill.classList.remove('synced');
+    if (cachedWeather && cachedAir) {
+        renderAIAssessment(cachedWeather, cachedAir);
+        renderEnvGrid(cachedWeather, cachedAir);
+    }
+}
+
+function personalizedExtraTip(key, status) {
+    const p = medicalProfile;
+    if (!p || status === 'good') return '';
+    const tips = [];
+    if (key === 'aqi') {
+        if (p.asthma) tips.push('Keep your rescue inhaler accessible — you\'ve noted asthma');
+        if (p.heart) tips.push('Limit exertion outdoors — cardiovascular conditions are more sensitive to particulate matter');
+        if (p.elderly) tips.push('Shorten outdoor time given your age/immune profile');
+    }
+    if (key === 'uv' || key === 'spf') {
+        if (p.skin) tips.push('Use SPF 50+ and reapply every 90 minutes — you\'ve flagged sun-sensitive skin');
+        if (p.pregnant) tips.push('Extra sun caution is worth it during pregnancy');
+    }
+    if (key === 'temp') {
+        if (p.heart) tips.push('Pace activity and hydrate often — heat adds cardiovascular strain');
+        if (p.pregnant) tips.push('Avoid overheating — stay in shade or AC during peak hours');
+        if (p.elderly) tips.push('Check hydration regularly — heat regulation is harder with age');
+    }
+    if (key === 'pollen') {
+        if (p.allergy) tips.push('Consider antihistamines ahead of time and keep windows closed');
+        if (p.asthma) tips.push('High pollen can trigger asthma symptoms too — keep your inhaler nearby');
+    }
+    if (key === 'humidity') {
+        if (p.asthma) tips.push('Humid air can be tougher on airways — pace yourself outdoors');
+    }
+    if (!tips.length) return '';
+    return `<li>✓ <b>Personalized:</b> ${tips.join('. ')}.</li>`;
+}
+
+// ===================== PERSONALISED HEALTH WARNINGS =====================
+function generateHealthWarnings() {
+    const f = window.lastFactors || {};
+    const p = medicalProfile;
+    const warnings = [];
+
+    if (f.aqi && f.aqi.status !== 'good') {
+        let text = `Air pollution is ${f.aqi.label.toLowerCase()} today (AQI ${f.aqi.value}). Prolonged outdoor exposure may increase respiratory irritation.`;
+        let tag = null;
+        if (p && p.asthma) { text += ' Since you\'ve noted asthma, symptoms can flare even at this level — keep a rescue inhaler within reach.'; tag = 'Personalized · asthma'; }
+        else if (p && p.heart) { text += ' With a cardiovascular condition on file, elevated particulate matter can add extra strain — consider limiting exertion outdoors.'; tag = 'Personalized · heart condition'; }
+        else if (p && p.elderly) { text += ' At 65+ or with reduced immune resilience, it\'s worth keeping outdoor time shorter today.'; tag = 'Personalized · age/immune status'; }
+        warnings.push({ text, status: f.aqi.status, icon: '🌫️', tag });
+    }
+    if (f.uv && f.uv.status !== 'good') {
+        let text = `UV levels are ${f.uv.label.toLowerCase()} today (Index ${f.uv.value}). Unprotected sun exposure raises the risk of sunburn and skin damage.`;
+        let tag = null;
+        if (p && p.skin) { text += ' Given your sun-sensitive skin, use SPF 50+ and reapply more often than usual.'; tag = 'Personalized · skin sensitivity'; }
+        else if (p && p.pregnant) { text += ' Pregnancy can increase skin sensitivity to UV — shade and sunscreen matter more today.'; tag = 'Personalized · pregnancy'; }
+        warnings.push({ text, status: f.uv.status, icon: '☀️', tag });
+    }
+    if (f.temp && f.temp.status !== 'good') {
+        let text = `Temperatures are running ${f.temp.label.toLowerCase()} today. Heat stress risk rises the longer you're active outdoors.`;
+        let tag = null;
+        if (p && p.heart) { text += ' Heat adds load to the cardiovascular system — pace outdoor activity and hydrate well.'; tag = 'Personalized · heart condition'; }
+        else if (p && p.pregnant) { text += ' Overheating is worth avoiding during pregnancy — stay in shade or AC during the hottest hours.'; tag = 'Personalized · pregnancy'; }
+        else if (p && p.elderly) { text += ' Heat regulation gets harder with age — check in on hydration through the day.'; tag = 'Personalized · age'; }
+        warnings.push({ text, status: f.temp.status, icon: '🌡️', tag });
+    }
+    if (f.pollen && f.pollen.status !== 'good') {
+        let text = `Pollen counts are ${f.pollen.label.toLowerCase()} today. This can trigger sneezing, itchy eyes, or worsened allergy symptoms.`;
+        let tag = null;
+        if (p && p.allergy) { text += ' Since you\'ve flagged seasonal allergies, consider antihistamines ahead of time and keep windows closed.'; tag = 'Personalized · allergies'; }
+        else if (p && p.asthma) { text += ' High pollen can also trigger asthma symptoms — have your inhaler nearby.'; tag = 'Personalized · asthma'; }
+        warnings.push({ text, status: f.pollen.status, icon: '🌸', tag });
+    }
+    if (f.humidity && f.humidity.status !== 'good') {
+        let text = `Humidity is ${f.humidity.label.toLowerCase()} today, which can make heat feel more intense and affect breathing comfort.`;
+        let tag = null;
+        if (p && p.asthma) { text += ' Humid air can be harder on airways — pace outdoor activity accordingly.'; tag = 'Personalized · asthma'; }
+        warnings.push({ text, status: f.humidity.status, icon: '💧', tag });
+    }
+    if (p && p.outdoor && warnings.length === 0) {
+        warnings.push({ text: 'Conditions look clear for outdoor work or exercise today — no elevated risk factors detected.', status: 'good', icon: '✅', tag: 'Personalized · outdoor lifestyle' });
+    }
+    return warnings;
+}
+
+function renderHealthWarnings() {
+    const box = document.getElementById('aiWarnings');
+    const warnings = generateHealthWarnings();
+    if (!warnings.length) { box.innerHTML = ''; return; }
+    box.innerHTML = warnings.map(w => `
+        <div class="ai-warning-item ${w.status}">
+            <span class="ai-warning-icon">${w.icon}</span>
+            <div>
+                <div>${w.text}</div>
+                ${w.tag ? `<span class="personal-tag">✓ ${w.tag}</span>` : ''}
+            </div>
+        </div>
+    `).join('');
 }
 
 // ===================== SOLUTIONS =====================
@@ -1023,11 +1415,17 @@ const solutions = {
 };
 
 function getSol(key, status) {
-    return (solutions[key] && solutions[key][status]) ? solutions[key][status] : '<ul><li>Stay aware of changing conditions</li></ul>';
+    let html = (solutions[key] && solutions[key][status]) ? solutions[key][status] : '<ul><li>Stay aware of changing conditions</li></ul>';
+    const extra = personalizedExtraTip(key, status);
+    if (extra) html = html.replace('</ul>', extra + '</ul>');
+    return html;
 }
 
 // ===================== RENDER CARDS =====================
+let envCardCounter = 0;
 function renderEnvCard(key, label, value, unit, icon, status, statusLabel, desc, extraHTML = '') {
+    envCardCounter++;
+    const solId = `sol-${key}-${envCardCounter}`;
     return `
         <div class="card ${status}">
             <div class="card-header">
@@ -1040,18 +1438,28 @@ function renderEnvCard(key, label, value, unit, icon, status, statusLabel, desc,
             ${extraHTML}
             <div class="solution">
                 <div class="solution-title"><span class="solution-ai-dot"></span>AI Guidance</div>
-                <div class="solution-text">${getSol(key, status)}</div>
+                <div class="solution-text collapsed" id="${solId}">${getSol(key, status)}</div>
+                <span class="solution-toggle" onclick="toggleSolution('${solId}', this)">Show tips ▾</span>
             </div>
             <div class="timestamp">Updated ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</div>
         </div>
     `;
 }
 
+function toggleSolution(id, el) {
+    const box = document.getElementById(id);
+    const collapsed = box.classList.toggle('collapsed');
+    el.textContent = collapsed ? 'Show tips ▾' : 'Hide tips ▴';
+}
+
+
 function renderEnvGrid(weather, airQuality) {
-    const cards = [];
+    const keyCards = [];   // Temperature, Humidity, Air Quality, UV, Pollen — spec's core signals
+    const moreCards = [];  // SPF, Wind, Visibility, Pressure, Dew Point, Cloud, Precipitation
     const cur = weather.current;
     const daily = weather.daily;
     const air = airQuality.hourly;
+    window.lastFactors = {};
 
     // AQI
     const pm25 = air.pm2_5 ? air.pm2_5[0] : 50;
@@ -1059,24 +1467,27 @@ function renderEnvGrid(weather, airQuality) {
     const aqi = Math.round(pm25 * 1.5);
     const aqiInfo = getAQIStatus(aqi);
     const aqiPct = Math.min(aqi / 300 * 100, 100);
-    cards.push(renderEnvCard('aqi', 'Air Quality Index', aqi, '', '🌫️', aqiInfo.status, aqiInfo.label,
+    keyCards.push(renderEnvCard('aqi', 'Air Quality Index', aqi, '', '🌫️', aqiInfo.status, aqiInfo.label,
         `PM2.5: ${pm25} µg/m³ · PM10: ${pm10} µg/m³`,
         `<div class="aqi-bar"><div class="aqi-fill" style="width:${aqiPct}%;background:${aqiInfo.color};"></div></div><div class="aqi-legend"><span>0</span><span>150</span><span>300+</span></div>`
     ));
+    window.lastFactors.aqi = { value: aqi, status: aqiInfo.status, label: aqiInfo.label };
 
     // Temperature
     const temp = Math.round(cur.temperature_2m);
     const tempInfo = getTempStatus(temp);
-    cards.push(renderEnvCard('temp', 'Temperature', temp, '°C', '🌡️', tempInfo.status, tempInfo.label,
+    keyCards.push(renderEnvCard('temp', 'Temperature', temp, '°C', '🌡️', tempInfo.status, tempInfo.label,
         `Feels like ${Math.round(cur.apparent_temperature)}°C. ${tempInfo.label} conditions.`
     ));
+    window.lastFactors.temp = { value: temp, status: tempInfo.status, label: tempInfo.label };
 
     // Humidity
     const hum = cur.relative_humidity_2m;
     const humInfo = getHumStatus(hum);
-    cards.push(renderEnvCard('humidity', 'Humidity', hum, '%', '💧', humInfo.status, humInfo.label,
+    keyCards.push(renderEnvCard('humidity', 'Humidity', hum, '%', '💧', humInfo.status, humInfo.label,
         humInfo.label + ' humidity levels detected.'
     ));
+    window.lastFactors.humidity = { value: hum, status: humInfo.status, label: humInfo.label };
 
     // UV
     const uv = daily.uv_index_max ? Math.round(daily.uv_index_max[0]) : 5;
@@ -1086,71 +1497,88 @@ function renderEnvGrid(weather, airQuality) {
         const c = i <= 2 ? '#4f9d6e' : i <= 5 ? '#d0a13f' : i <= 7 ? '#cd6c48' : '#b2542e';
         uvDots += `<div class="uv-dot ${i===uv?'active':''}" style="background:${c};opacity:${i<=uv?1:0.2}">${i}</div>`;
     }
-    cards.push(renderEnvCard('uv', 'UV Index', uv, '', '☀️', uvInfo.status, uvInfo.label, uvInfo.label + ' UV exposure risk.',
+    keyCards.push(renderEnvCard('uv', 'UV Index', uv, '', '☀️', uvInfo.status, uvInfo.label, uvInfo.label + ' UV exposure risk.',
         `<div class="uv-dots">${uvDots}</div>`
     ));
+    window.lastFactors.uv = { value: uv, status: uvInfo.status, label: uvInfo.label };
 
     // SPF
     const spfVal = uv <= 2 ? 15 : uv <= 5 ? 30 : uv <= 7 ? 50 : 50;
     const spfStatus = uv <= 2 ? 'good' : uv <= 5 ? 'moderate' : 'unhealthy';
     const spfLabel = uv <= 2 ? 'Minimal' : uv <= 5 ? 'Recommended' : uv <= 7 ? 'High' : 'Critical';
-    cards.push(renderEnvCard('spf', 'Recommended SPF', spfVal, '+', '🧴', spfStatus, spfLabel,
+    moreCards.push(renderEnvCard('spf', 'Recommended SPF', spfVal, '+', '🧴', spfStatus, spfLabel,
         `SPF ${spfVal}+ needed for current UV level of ${uv}.`
     ));
 
     // Wind
     const wind = Math.round(cur.wind_speed_10m);
     const windInfo = getWindStatus(wind);
-    cards.push(renderEnvCard('wind', 'Wind Speed', wind, ' km/h', '💨', windInfo.status, windInfo.label,
+    moreCards.push(renderEnvCard('wind', 'Wind Speed', wind, ' km/h', '💨', windInfo.status, windInfo.label,
         `Wind direction: ${cur.wind_direction_10m}°. ${windInfo.label} breeze.`
     ));
 
     // Visibility
     const vis = Math.round(cur.visibility / 1000);
     const visInfo = getVisStatus(vis);
-    cards.push(renderEnvCard('visibility', 'Visibility', vis, ' km', '👁️', visInfo.status, visInfo.label,
+    moreCards.push(renderEnvCard('visibility', 'Visibility', vis, ' km', '👁️', visInfo.status, visInfo.label,
         visInfo.label + ' visibility conditions.'
     ));
 
     // Pressure
     const press = Math.round(cur.surface_pressure);
     const pressInfo = getPressStatus(press);
-    cards.push(renderEnvCard('pressure', 'Atmospheric Pressure', press, ' hPa', '📊', pressInfo.status, pressInfo.label,
+    moreCards.push(renderEnvCard('pressure', 'Atmospheric Pressure', press, ' hPa', '📊', pressInfo.status, pressInfo.label,
         pressInfo.label + ' atmospheric pressure.'
     ));
 
     // Dew Point
     const dew = Math.round(cur.dew_point_2m);
     const dewInfo = getDewStatus(dew, temp);
-    cards.push(renderEnvCard('dewpoint', 'Dew Point', dew, '°C', '💦', dewInfo.status, dewInfo.label,
+    moreCards.push(renderEnvCard('dewpoint', 'Dew Point', dew, '°C', '💦', dewInfo.status, dewInfo.label,
         `Difference from temp: ${temp - dew}°C. ${dewInfo.label} comfort level.`
     ));
 
     // Cloud Cover
     const cloud = cur.cloud_cover;
     const cloudInfo = getCloudStatus(cloud);
-    cards.push(renderEnvCard('cloud', 'Cloud Cover', cloud, '%', '☁️', cloudInfo.status, cloudInfo.label,
+    moreCards.push(renderEnvCard('cloud', 'Cloud Cover', cloud, '%', '☁️', cloudInfo.status, cloudInfo.label,
         cloudInfo.label + ' skies. Cloud cover at ' + cloud + '%.'
     ));
 
     // Precipitation
     const precip = cur.precipitation;
     const precipInfo = getPrecipStatus(precip);
-    cards.push(renderEnvCard('precip', 'Precipitation', precip, ' mm', '🌧️', precipInfo.status, precipInfo.label,
+    moreCards.push(renderEnvCard('precip', 'Precipitation', precip, ' mm', '🌧️', precipInfo.status, precipInfo.label,
         precipInfo.label + ' rainfall expected.'
     ));
 
-    // Pollen (simulated)
-    const month = new Date().getMonth();
-    const isPollen = (month >= 2 && month <= 5) || (month >= 8 && month <= 10);
-    const pollenVal = isPollen ? Math.round(40 + Math.random()*50) : Math.round(5 + Math.random()*20);
+    // Pollen — Open-Meteo provides real pollen data for Europe only; elsewhere
+    // (or if the field is null) we fall back to a seasonal estimate and say so.
+    const pollenTypes = ['alder_pollen','birch_pollen','grass_pollen','mugwort_pollen','olive_pollen','ragweed_pollen'];
+    let pollenVal = null, pollenIsReal = false;
+    for (const t of pollenTypes) {
+        const v = air[t] && air[t][0];
+        if (typeof v === 'number' && v !== null) {
+            pollenVal = Math.max(pollenVal || 0, v);
+            pollenIsReal = true;
+        }
+    }
+    if (!pollenIsReal) {
+        const month = new Date().getMonth();
+        const isPollenSeason = (month >= 2 && month <= 5) || (month >= 8 && month <= 10);
+        pollenVal = isPollenSeason ? Math.round(40 + Math.random()*50) : Math.round(5 + Math.random()*20);
+    } else {
+        pollenVal = Math.round(pollenVal);
+    }
     const pollenStatus = pollenVal > 60 ? 'unhealthy' : pollenVal > 30 ? 'moderate' : 'good';
     const pollenLabel = pollenVal > 60 ? 'High' : pollenVal > 30 ? 'Moderate' : 'Low';
-    cards.push(renderEnvCard('pollen', 'Pollen Count', pollenVal, ' /m³', '🌸', pollenStatus, pollenLabel,
-        pollenLabel + ' pollen levels.'
+    keyCards.push(renderEnvCard('pollen', 'Pollen Count', pollenVal, ' /m³', '🌸', pollenStatus, pollenLabel,
+        pollenLabel + ' pollen levels.' + (pollenIsReal ? '' : ' (Seasonal estimate — live pollen data isn\'t available for this region.)')
     ));
+    window.lastFactors.pollen = { value: pollenVal, status: pollenStatus, label: pollenLabel, estimated: !pollenIsReal };
 
-    document.getElementById('envGrid').innerHTML = cards.join('');
+    document.getElementById('envGridKey').innerHTML = keyCards.join('');
+    document.getElementById('envGridMore').innerHTML = moreCards.join('');
 }
 
 // ===================== HERO =====================
@@ -1165,10 +1593,7 @@ function renderHero(weather) {
 
     document.getElementById('heroHum').textContent = cur.relative_humidity_2m + '%';
     document.getElementById('heroWind').textContent = Math.round(cur.wind_speed_10m) + ' km/h';
-    document.getElementById('heroVis').textContent = Math.round(cur.visibility / 1000) + ' km';
-    document.getElementById('heroPress').textContent = Math.round(cur.surface_pressure) + ' hPa';
     document.getElementById('heroPrecip').textContent = cur.precipitation + ' mm';
-    document.getElementById('heroCloud').textContent = cur.cloud_cover + '%';
 
     // Sunrise / Sunset
     const sunrise = formatTime(daily.sunrise[0]);
@@ -1256,7 +1681,7 @@ async function fetchData(lat, lon) {
     // Fixed API URLs with proper parameters
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,visibility,dew_point_2m&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
 
-    const airUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm10,pm2_5&forecast_days=7&timezone=auto`;
+    const airUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm10,pm2_5,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&forecast_days=7&timezone=auto`;
 
     // Weather is required. Air quality is fetched separately and is allowed
     // to fail without taking down the whole dashboard — we fall back to
