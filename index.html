@@ -124,6 +124,23 @@
             cursor: pointer; color: var(--accent); font-size: 13px; transition: all 0.2s;
         }
         .search-box button:hover { background: var(--accent); color: var(--panel-solid); }
+        .search-wrap { position: relative; }
+        .search-suggestions {
+            position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 240px;
+            background: var(--panel-solid); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+            box-shadow: var(--shadow); overflow: hidden; z-index: 50; display: none;
+        }
+        .search-suggestions.show { display: block; }
+        .search-suggestion-item {
+            padding: 9px 14px; font-size: 12.5px; color: var(--text); cursor: pointer;
+            border-bottom: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 2px;
+        }
+        .search-suggestion-item:last-child { border-bottom: none; }
+        .search-suggestion-item:hover, .search-suggestion-item.active { background: var(--accent-soft); }
+        .search-suggestion-item .ssi-sub { font-size: 10.5px; color: var(--text-muted); font-family: var(--f-mono); }
+        .search-suggestion-empty { padding: 10px 14px; font-size: 12px; color: var(--text-muted); }
+        .loc-pill { cursor: pointer; }
+        .loc-pill:hover { border-color: var(--accent); color: var(--accent); }
         .tag-pill, .loc-pill, .live-pill {
             display: flex; align-items: center; gap: 7px; background: var(--panel);
             backdrop-filter: blur(10px); padding: 7px 13px; border-radius: var(--radius-sm);
@@ -580,12 +597,18 @@
                 </div>
             </div>
             <div class="header-actions">
-                <div class="search-box">
-                    <span style="color:var(--text-muted);font-size:12px;">⌕</span>
-                    <input type="text" id="citySearch" placeholder="Search city…" onkeypress="if(event.key==='Enter')searchCity()">
-                    <button onclick="searchCity()">→</button>
+                <div class="search-wrap">
+                    <div class="search-box">
+                        <span style="color:var(--text-muted);font-size:12px;">⌕</span>
+                        <input type="text" id="citySearch" placeholder="Search city…"
+                               autocomplete="off"
+                               oninput="onCitySearchInput()"
+                               onkeydown="onCitySearchKeydown(event)">
+                        <button onclick="searchCity()">→</button>
+                    </div>
+                    <div class="search-suggestions" id="citySuggestions"></div>
                 </div>
-                <div class="loc-pill" id="locPill">📍 Detecting…</div>
+                <div class="loc-pill" id="locPill" onclick="useMyLocation()" title="Click to use your current location">📍 Detecting…</div>
                 <div class="live-pill"><div class="live-dot"></div> Live</div>
                 <button class="icon-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh">↻</button>
                 <button class="icon-btn" onclick="toggleDark()" title="Toggle theme">◐</button>
@@ -1279,12 +1302,109 @@ async function getCityName(lat, lon) {
     }
 }
 
+// ===================== CITY SEARCH — LIVE SUGGESTIONS =====================
+let citySearchTimer = null;
+let lastCityResults = [];
+let activeSuggestionIndex = -1;
+
+function onCitySearchInput() {
+    const query = document.getElementById('citySearch').value.trim();
+    clearTimeout(citySearchTimer);
+    activeSuggestionIndex = -1;
+    if (query.length < 2) {
+        hideCitySuggestions();
+        return;
+    }
+    // Debounce so we don't fire a request on every keystroke.
+    citySearchTimer = setTimeout(() => fetchCitySuggestions(query), 300);
+}
+
+async function fetchCitySuggestions(query) {
+    const box = document.getElementById('citySuggestions');
+    try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`);
+        const data = await res.json();
+        lastCityResults = data.results || [];
+        renderCitySuggestions();
+    } catch (e) {
+        console.log('Suggestion lookup failed:', e.message);
+        box.innerHTML = '<div class="search-suggestion-empty">Couldn\'t reach the search service — check your connection.</div>';
+        box.classList.add('show');
+    }
+}
+
+function renderCitySuggestions() {
+    const box = document.getElementById('citySuggestions');
+    if (!lastCityResults.length) {
+        box.innerHTML = '<div class="search-suggestion-empty">No cities found</div>';
+        box.classList.add('show');
+        return;
+    }
+    box.innerHTML = lastCityResults.map((r, i) => {
+        const sub = [r.admin1, r.country].filter(Boolean).join(', ');
+        return `<div class="search-suggestion-item${i === activeSuggestionIndex ? ' active' : ''}" data-idx="${i}" onclick="selectCitySuggestion(${i})">
+            <span>${r.name}</span>
+            <span class="ssi-sub">${sub}${r.latitude ? ' · ' + r.latitude.toFixed(2) + ', ' + r.longitude.toFixed(2) : ''}</span>
+        </div>`;
+    }).join('');
+    box.classList.add('show');
+}
+
+function hideCitySuggestions() {
+    const box = document.getElementById('citySuggestions');
+    box.classList.remove('show');
+    box.innerHTML = '';
+}
+
+function selectCitySuggestion(i) {
+    const r = lastCityResults[i];
+    if (!r) return;
+    document.getElementById('citySearch').value = r.name;
+    hideCitySuggestions();
+    currentLat = r.latitude;
+    currentLon = r.longitude;
+    currentCity = r.name + (r.admin1 && r.admin1 !== r.name ? ', ' + r.admin1 : '') + (r.country ? ', ' + r.country : '');
+    loadAll();
+}
+
+function onCitySearchKeydown(e) {
+    const box = document.getElementById('citySuggestions');
+    const isShowing = box.classList.contains('show') && lastCityResults.length;
+    if (e.key === 'ArrowDown' && isShowing) {
+        e.preventDefault();
+        activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, lastCityResults.length - 1);
+        renderCitySuggestions();
+    } else if (e.key === 'ArrowUp' && isShowing) {
+        e.preventDefault();
+        activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+        renderCitySuggestions();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (isShowing && activeSuggestionIndex >= 0) {
+            selectCitySuggestion(activeSuggestionIndex);
+        } else {
+            searchCity();
+        }
+    } else if (e.key === 'Escape') {
+        hideCitySuggestions();
+    }
+}
+
+// Close the dropdown when clicking outside it.
+document.addEventListener('click', (e) => {
+    const wrap = document.querySelector('.search-wrap');
+    if (wrap && !wrap.contains(e.target)) hideCitySuggestions();
+});
+
+// Fallback for pressing the → button or Enter with no suggestion highlighted:
+// same behavior as before, just uses the top match.
 async function searchCity() {
     const query = document.getElementById('citySearch').value.trim();
     if (!query) {
         showError('Please enter a city name');
         return;
     }
+    hideCitySuggestions();
     document.getElementById('loader').classList.remove('hidden');
     document.getElementById('loaderText').textContent = 'Searching for ' + query + '…';
     try {
@@ -1298,7 +1418,7 @@ async function searchCity() {
         const r = data.results[0];
         currentLat = r.latitude;
         currentLon = r.longitude;
-        currentCity = r.name + (r.country ? ', ' + r.country : '');
+        currentCity = r.name + (r.admin1 && r.admin1 !== r.name ? ', ' + r.admin1 : '') + (r.country ? ', ' + r.country : '');
         await loadAll();
     } catch (e) {
         showError('Search failed. Please check your connection.');
@@ -1318,46 +1438,99 @@ function dismissError() {
     document.getElementById('errorBox').classList.remove('show');
 }
 
+// ===================== GEOLOCATION =====================
+let geoAttempted = false; // have we tried once this session, so we don't re-prompt on every refresh
+
+function geolocationErrorMessage(e) {
+    // e is a GeolocationPositionError (code 1/2/3) or a generic Error (our own timeout,
+    // or "Geolocation not supported").
+    if (e && typeof e.code === 'number') {
+        if (e.code === 1) return 'Location access denied — allow it in your browser\'s site settings, then click here to retry.';
+        if (e.code === 2) return 'Location unavailable right now — click here to retry.';
+        if (e.code === 3) return 'Location request timed out — click here to retry.';
+    }
+    if (!window.isSecureContext) {
+        return 'Location needs HTTPS — this page is loaded over an insecure connection, so the browser blocks it.';
+    }
+    return 'Couldn\'t get your location — click here to retry.';
+}
+
+function getGeolocation() {
+    return new Promise((res, rej) => {
+        if (!navigator.geolocation) {
+            rej(new Error('Geolocation not supported by this browser'));
+            return;
+        }
+        let settled = false;
+        // Race the browser's geolocation call against our own timer. Some
+        // embedded/sandboxed browsers silently never call either geolocation
+        // callback when permission is blocked, which would otherwise hang
+        // this await forever.
+        const hardTimeout = setTimeout(() => {
+            if (!settled) { settled = true; rej(new Error('Geolocation timed out')); }
+        }, 8000);
+        navigator.geolocation.getCurrentPosition(
+            (p) => { if (!settled) { settled = true; clearTimeout(hardTimeout); res(p); } },
+            (e) => { if (!settled) { settled = true; clearTimeout(hardTimeout); rej(e); } },
+            { timeout: 7000, maximumAge: 0 }
+        );
+    });
+}
+
+// Explicit "use my location" — always re-prompts, regardless of what's in the
+// search box, and shows exactly why it failed instead of just falling back.
+async function useMyLocation() {
+    const locPill = document.getElementById('locPill');
+    document.getElementById('citySearch').value = '';
+    hideCitySuggestions();
+    locPill.textContent = '📍 Detecting…';
+    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById('loaderText').textContent = 'Getting your location';
+    geoAttempted = true;
+    try {
+        const pos = await getGeolocation();
+        currentLat = pos.coords.latitude;
+        currentLon = pos.coords.longitude;
+        currentCity = await getCityName(currentLat, currentLon);
+        await loadAll(true);
+    } catch (e) {
+        console.log('Geolocation failed:', e.message || e);
+        currentLat = CONFIG.fallbackLat;
+        currentLon = CONFIG.fallbackLon;
+        currentCity = CONFIG.fallbackCity;
+        await loadAll(true, geolocationErrorMessage(e));
+    }
+}
+
 // ===================== MAIN =====================
-async function loadAll() {
+// skipGeo=true means location (or the fallback) has already been resolved by
+// the caller — don't try geolocation again. presetError, if given, is shown
+// in the location pill instead of the resolved city name.
+async function loadAll(skipGeo, presetError) {
     const loader = document.getElementById('loader');
     const locPill = document.getElementById('locPill');
     loader.classList.remove('hidden');
     document.getElementById('loaderText').textContent = "Getting today's picture ready";
 
     try {
-        // Try to get location if no manual search was done
         const searchInput = document.getElementById('citySearch');
-        if (!searchInput.value) {
+        let geoErrorMsg = presetError || null;
+        if (!skipGeo && !searchInput.value && !geoAttempted) {
+            geoAttempted = true;
             try {
-                if (navigator.geolocation) {
-                    document.getElementById('loaderText').textContent = 'Getting your location';
-                    // Race the browser's geolocation call against our own timer.
-                    // Some embedded/sandboxed browsers silently never call either
-                    // geolocation callback when permission is blocked, which would
-                    // otherwise hang this await forever.
-                    const pos = await new Promise((res, rej) => {
-                        let settled = false;
-                        const hardTimeout = setTimeout(() => {
-                            if (!settled) { settled = true; rej(new Error('Geolocation timed out')); }
-                        }, 6000);
-                        navigator.geolocation.getCurrentPosition(
-                            (p) => { if (!settled) { settled = true; clearTimeout(hardTimeout); res(p); } },
-                            (e) => { if (!settled) { settled = true; clearTimeout(hardTimeout); rej(e); } },
-                            {timeout: 5000}
-                        );
-                    });
-                    currentLat = pos.coords.latitude;
-                    currentLon = pos.coords.longitude;
-                    currentCity = await getCityName(currentLat, currentLon);
-                }
+                document.getElementById('loaderText').textContent = 'Getting your location';
+                const pos = await getGeolocation();
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                currentCity = await getCityName(currentLat, currentLon);
             } catch(e) {
-                console.log('Using fallback location:', e.message);
+                console.log('Using fallback location:', e.message || e);
                 currentCity = CONFIG.fallbackCity;
+                geoErrorMsg = geolocationErrorMessage(e);
             }
         }
 
-        locPill.textContent = '📍 ' + currentCity;
+        locPill.textContent = geoErrorMsg ? ('📍 ' + geoErrorMsg) : ('📍 ' + currentCity);
         document.getElementById('loaderText').textContent = 'Fetching weather data';
 
         const { weather, air } = await fetchData(currentLat, currentLon);
