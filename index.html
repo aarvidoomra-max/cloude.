@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloude. | Environment Station — Project REACH</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================================
+           TOKENS — Instrument-panel palette. Default = "Day station"
+           (aged paper + brass), .dark-mode = "Night station" (ink + brass glow).
+           ============================================================ */
+        :root {
+            --bg-1: #fbfdff; --bg-2: #eef4fb; --bg-3: #e0ebf7; --bg-4: #cfdff1;
+            --panel: rgba(255,255,255,0.72);
+            --panel-solid: #ffffff;
+            --hairline: rgba(20,24,30,0.11);
+            --hairline-strong: rgba(20,24,30,0.24);
+            --text: #14181d; --text-secondary: #454c55; --text-muted: #7c8592;
+            --primary: #14181d; --accent: #6d97c4; --accent-soft: rgba(109,151,196,0.14);
+            --good: #4f9d6e; --moderate: #d0a13f; --unhealthy: #cd6c48; --severe: #8a6bb0;
+            --shadow: 0 1px 2px rgba(20,30,45,0.05), 0 14px 36px rgba(20,30,45,0.08);
+            --radius: 14px; --radius-sm: 9px;
+            --f-display: 'Fraunces', serif; --f-mono: 'IBM Plex Mono', monospace; --f-body: 'Inter', sans-serif;
+        }
+        .dark-mode {
+            --bg-1: #0b0f16; --bg-2: #0f1622; --bg-3: #141d2c; --bg-4: #1a2637;
+            --panel: rgba(15,22,34,0.78);
+            --panel-solid: #101826;
+            --hairline: rgba(159,192,227,0.16); --hairline-strong: rgba(159,192,227,0.32);
+            --text: #eef3f9; --text-secondary: #b7c4d3; --text-muted: #78899e;
+            --primary: #eef3f9; --accent: #9fc0e3; --accent-soft: rgba(159,192,227,0.14);
+            --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 18px 44px rgba(0,0,0,0.45);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--f-body);
+            background:
+                linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 35%, var(--bg-3) 68%, var(--bg-4) 100%);
+            min-height: 100vh; color: var(--text); transition: background 0.5s, color 0.5s;
+            padding: 22px; overflow-x: hidden; position: relative;
+        }
+        /* faint dot grid, echoing the logo's dotted backdrop */
+        body::before {
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: radial-gradient(var(--hairline-strong) 1px, transparent 1px);
+            background-size: 22px 22px;
+            opacity: 0.5;
+        }
+        .container { max-width: 1320px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* ===== LOADER ===== */
+        .loader-overlay {
+            position: fixed; inset: 0; background: var(--bg-1); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.6s;
+        }
+        .loader-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loader-ring {
+            width: 52px; height: 52px; border-radius: 50%;
+            border: 2px solid var(--hairline-strong); border-top-color: var(--accent);
+            animation: spin 0.9s linear infinite;
+        }
+        .loader-text {
+            margin-top: 18px; font-size: 11px; color: var(--text-muted); font-weight: 500;
+            font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 1.5px;
+        }
+        .loader-bar { width: 180px; height: 2px; background: var(--hairline); margin-top: 14px; overflow: hidden; }
+        .loader-bar-fill { height: 100%; background: var(--accent); animation: loadBar 1.5s ease-in-out infinite; }
+        @keyframes loadBar { 0%{width:0%;margin-left:0;}50%{width:100%;margin-left:0;}100%{width:0%;margin-left:100%;} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; flex-wrap: wrap; gap: 14px;
+            padding-bottom: 18px; border-bottom: 1px solid var(--hairline);
+        }
+        .brand { display: flex; align-items: center; gap: 14px; }
+        .logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--hairline-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    padding: 2px;
+}
+
+.logo img {
+    width: 74%;
+    height: 74%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+}
+ 
+        .brand-text .title {
+            font-family: var(--f-display); font-size: 26px; font-weight: 600;
+            color: var(--primary); letter-spacing: -0.3px;
+        }
+        .brand-text .subtitle {
+            font-size: 10px; color: var(--text-muted); margin-top: 2px;
+            font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .search-box {
+            display: flex; align-items: center; background: var(--panel);
+            backdrop-filter: blur(10px); border-radius: var(--radius-sm); padding: 7px 14px;
+            border: 1px solid var(--hairline); gap: 8px;
+        }
+        .search-box input {
+            border: none; background: transparent; outline: none; font-size: 13px;
+            color: var(--text); width: 150px; font-family: var(--f-body);
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box button {
+            background: transparent; border: 1px solid var(--hairline-strong); border-radius: 50%;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--accent); font-size: 13px; transition: all 0.2s;
+        }
+        .search-box button:hover { background: var(--accent); color: var(--panel-solid); }
+        .tag-pill, .loc-pill, .live-pill {
+            display: flex; align-items: center; gap: 7px; background: var(--panel);
+            backdrop-filter: blur(10px); padding: 7px 13px; border-radius: var(--radius-sm);
+            font-size: 10.5px; color: var(--primary); font-weight: 600;
+            border: 1px solid var(--hairline); font-family: var(--f-mono);
+            text-transform: uppercase; letter-spacing: 0.8px;
+        }
+        .live-pill { color: var(--accent); }
+        .live-dot { width: 6px; height: 6px; background: var(--unhealthy); border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.25;} }
+        .icon-btn {
+            background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 15px; color: var(--primary); transition: all 0.25s; backdrop-filter: blur(10px);
+        }
+        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .icon-btn.spinning { animation: spin 0.8s linear infinite; }
+
+        /* ===== HERO ===== */
+        .hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-bottom: 16px; }
+        @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+        .panel {
+            background: var(--panel); backdrop-filter: blur(16px);
+            border-radius: var(--radius); border: 1px solid var(--hairline); box-shadow: var(--shadow);
+        }
+        .hero-main { padding: 28px 30px; position: relative; overflow: hidden; }
+        .eyebrow {
+            font-family: var(--f-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+            color: var(--text-muted); display: flex; align-items: center; gap: 8px;
+        }
+        .eyebrow::before { content: ''; width: 14px; height: 1px; background: var(--accent); display: inline-block; }
+        .hero-top { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 6px; }
+        .hero-temp { font-family: var(--f-display); font-size: 76px; font-weight: 500; line-height: 1; color: var(--primary); }
+        .hero-temp .unit { font-size: 26px; font-weight: 400; color: var(--text-muted); vertical-align: super; }
+        .hero-condition { font-size: 17px; font-weight: 600; color: var(--text-secondary); margin-top: 6px; font-family: var(--f-display); }
+        .hero-feels { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-family: var(--f-mono); }
+        .hero-emoji { font-size: 56px; opacity: 0.4; }
+        .hero-details {
+            display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 26px;
+            border-top: 1px solid var(--hairline); padding-top: 18px;
+        }
+        .hero-detail { text-align: left; padding: 4px 14px; border-left: 1px solid var(--hairline); }
+        .hero-detail:first-child { border-left: none; padding-left: 0; }
+        .hero-detail .d-label {
+            font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+            font-family: var(--f-mono);
+        }
+        .hero-detail .d-value { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 4px; font-family: var(--f-mono); }
+
+        /* ===== HORIZON GAUGE (signature element) ===== */
+        .horizon-card { padding: 22px 26px 18px; display: flex; flex-direction: column; align-items: center; }
+        .horizon-card .eyebrow { align-self: flex-start; }
+        .horizon-arc { width: 100%; max-width: 260px; margin-top: 6px; }
+        .horizon-times { display: flex; justify-content: space-between; width: 100%; max-width: 260px; margin-top: -6px; }
+        .ht { display: flex; flex-direction: column; }
+        .ht:last-child { align-items: flex-end; }
+        .ht-label { font-family: var(--f-mono); font-size: 9px; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
+        .ht-value { font-family: var(--f-display); font-size: 20px; color: var(--primary); font-weight: 500; margin-top: 2px; }
+        .horizon-sub { font-size: 11px; color: var(--text-secondary); margin-top: 12px; font-family: var(--f-mono); text-align: center; }
+
+        /* ===== SECTIONS ===== */
+        .section-title {
+            display: flex; align-items: baseline; gap: 10px; margin: 26px 0 14px;
+        }
+        .section-title .st-main {
+            font-family: var(--f-display); font-size: 17px; font-weight: 600; color: var(--primary);
+        }
+        .section-title .st-line { flex: 1; height: 1px; background: var(--hairline); }
+        .section-title .st-tag {
+            font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase;
+        }
+
+        /* ===== 7-DAY FORECAST ===== */
+        .forecast-row {
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;
+            scrollbar-width: thin; scrollbar-color: var(--accent) transparent;
+        }
+        .forecast-row::-webkit-scrollbar { height: 3px; }
+        .forecast-row::-webkit-scrollbar-thumb { background: var(--accent); }
+        .forecast-day {
+            min-width: 122px; background: var(--panel); backdrop-filter: blur(16px);
+            border-radius: var(--radius-sm); padding: 16px 14px 14px 26px; text-align: left;
+            box-shadow: var(--shadow); border: 1px solid var(--hairline);
+            transition: transform 0.25s, border-color 0.25s; cursor: pointer; position: relative;
+        }
+        .forecast-day:hover { transform: translateY(-4px); border-color: var(--hairline-strong); }
+        .fd-range { position: absolute; left: 10px; top: 16px; bottom: 16px; width: 3px; background: var(--hairline); border-radius: 2px; }
+        .fd-range-fill { position: absolute; left: 0; width: 100%; border-radius: 2px; background: var(--accent); }
+        .forecast-day .fd-name {
+            font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 1px; font-family: var(--f-mono);
+        }
+        .forecast-day .fd-icon { font-size: 26px; margin: 8px 0 4px; }
+        .forecast-day .fd-temp { font-size: 19px; font-weight: 600; color: var(--primary); font-family: var(--f-mono); }
+        .forecast-day .fd-temp-low { font-size: 12px; color: var(--text-muted); }
+        .forecast-day .fd-desc { font-size: 10.5px; color: var(--text-secondary); margin-top: 3px; }
+        .forecast-day .fd-aqi {
+            display: inline-block; margin-top: 9px; padding: 2px 8px; border-radius: 4px;
+            font-size: 9px; font-weight: 600; text-transform: uppercase; font-family: var(--f-mono); letter-spacing: 0.4px;
+        }
+
+        /* ===== GRID CARDS ===== */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(252px, 1fr)); gap: 14px; }
+        .card {
+            background: var(--panel); backdrop-filter: blur(16px);
+            border-radius: var(--radius); padding: 20px 22px;
+            box-shadow: var(--shadow); border: 1px solid var(--hairline);
+            transition: transform 0.25s, border-color 0.25s; position: relative; overflow: hidden;
+        }
+        .card:hover { transform: translateY(-3px); border-color: var(--hairline-strong); }
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+        }
+        .card.good::before { background: var(--good); }
+        .card.moderate::before { background: var(--moderate); }
+        .card.unhealthy::before { background: var(--unhealthy); }
+        .card.severe::before { background: var(--severe); }
+
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .card-icon { font-size: 22px; opacity: 0.75; }
+        .badge {
+            padding: 3px 9px; border-radius: 4px; font-size: 9.5px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-family: var(--f-mono);
+            border: 1px solid currentColor;
+        }
+        .badge.good { color: var(--good); background: rgba(76,138,88,0.08); }
+        .badge.moderate { color: var(--moderate); background: rgba(182,132,42,0.08); }
+        .badge.unhealthy { color: var(--unhealthy); background: rgba(178,84,46,0.08); }
+        .badge.severe { color: var(--severe); background: rgba(124,74,140,0.08); }
+        .label {
+            font-size: 10px; color: var(--text-muted); font-weight: 500; text-transform: uppercase;
+            letter-spacing: 1.2px; margin-bottom: 6px; font-family: var(--f-mono);
+        }
+        .value { font-size: 32px; font-weight: 600; color: var(--text); line-height: 1.1; font-family: var(--f-mono); }
+        .unit { font-size: 13px; color: var(--text-muted); font-weight: 400; margin-left: 3px; }
+        .desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; }
+        .solution {
+            background: var(--accent-soft); border-radius: var(--radius-sm); padding: 13px 14px;
+            margin-top: 14px; border-left: 2px solid var(--accent);
+        }
+        .solution-title {
+            font-size: 9.5px; font-weight: 600; color: var(--accent); text-transform: uppercase;
+            letter-spacing: 1px; margin-bottom: 6px; font-family: var(--f-mono);
+        }
+        .solution-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+        .solution-text ul { margin: 4px 0; padding-left: 15px; }
+        .solution-text li { margin-bottom: 3px; }
+        .timestamp { font-size: 9.5px; color: var(--text-muted); margin-top: 12px; font-family: var(--f-mono); }
+
+        /* AQI Bar */
+        .aqi-bar { height: 4px; background: var(--hairline); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+        .aqi-fill { height: 100%; transition: width 1s ease; }
+        .aqi-legend { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 4px; font-family: var(--f-mono); }
+
+        /* UV Dots */
+        .uv-dots { display: flex; gap: 3px; margin-top: 10px; flex-wrap: wrap; }
+        .uv-dot {
+            width: 19px; height: 19px; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 600; color: #fff; transition: all 0.3s; font-family: var(--f-mono);
+        }
+        .uv-dot.active { box-shadow: 0 0 0 2px var(--panel-solid), 0 0 0 3px var(--accent); }
+
+        /* Error */
+        .error-box {
+            background: rgba(178,84,46,0.09); border: 1px solid var(--unhealthy);
+            border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 18px; color: var(--unhealthy);
+            display: none; font-size: 12.5px;
+        }
+        .error-box.show { display: block; }
+        .error-box button {
+            font-family: var(--f-mono); font-size: 11px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center; margin-top: 34px; color: var(--text-muted); font-size: 10.5px;
+            padding: 18px 0; font-family: var(--f-mono); border-top: 1px solid var(--hairline);
+        }
+        .footer span { color: var(--accent); font-weight: 600; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .hero-temp { font-size: 52px; }
+            .hero-details { grid-template-columns: repeat(2, 1fr); }
+            .hero-detail:nth-child(2n+1) { border-left: none; padding-left: 0; }
+            .value { font-size: 26px; }
+            .search-box input { width: 110px; }
+        }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+        }
+
+        /* ============================================================
+           TASKBAR — pill navigation bar (Dashboard / Chatbot)
+           ============================================================ */
+        :root {
+            --nav-ink: #58123a;
+            --nav-ink-2: #7a1d4f;
+            --nav-bg: rgba(255,255,255,0.55);
+            --nav-pill-bg: rgba(255,255,255,0.7);
+        }
+        .dark-mode {
+            --nav-ink: #d98fb3;
+            --nav-ink-2: #7a1d4f;
+            --nav-bg: rgba(20,10,18,0.5);
+            --nav-pill-bg: rgba(35,18,28,0.65);
+        }
+        .taskbar-wrap { max-width: 1320px; margin: 0 auto 20px; position: relative; z-index: 20; }
+        .taskbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 14px;
+            background: var(--nav-bg); backdrop-filter: blur(18px);
+            border: 1px solid var(--hairline); border-radius: 999px;
+            padding: 10px 12px 10px 10px; box-shadow: var(--shadow); flex-wrap: wrap;
+        }
+        .taskbar-brand { display: flex; align-items: center; gap: 10px; }
+        .taskbar-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--hairline-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    padding: 2px;
+}
+
+.taskbar-logo img {
+    width: 72%;
+    height: 72%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+}
+        .taskbar-name {
+            background: var(--nav-ink); color: #fff; font-family: var(--f-body); font-weight: 700;
+            font-size: 12.5px; letter-spacing: 0.6px; padding: 9px 18px; border-radius: 999px;
+            text-transform: uppercase; white-space: nowrap;
+        }
+        .taskbar-nav { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .taskbar-link {
+            border: none; background: transparent; cursor: pointer; font-family: var(--f-body);
+            font-size: 14.5px; font-weight: 500; color: var(--text-secondary);
+            padding: 10px 20px; border-radius: 999px; transition: all 0.2s; display: flex; align-items: center; gap: 7px;
+        }
+        .taskbar-link:hover { color: var(--nav-ink-2); background: var(--accent-soft); }
+        .taskbar-link.active { background: var(--nav-ink); color: #fff; font-weight: 600; }
+        .taskbar-link .tb-icon { font-size: 14px; }
+        .taskbar-actions { display: flex; align-items: center; gap: 8px; }
+        .taskbar-signin {
+            background: var(--nav-ink); color: #fff; border: none; border-radius: 999px;
+            padding: 10px 20px; font-family: var(--f-body); font-weight: 600; font-size: 13.5px;
+            cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .taskbar-signin:hover { opacity: 0.88; }
+        @media (max-width: 760px) {
+            .taskbar { border-radius: var(--radius); justify-content: center; }
+            .taskbar-nav { justify-content: center; width: 100%; order: 3; }
+            .taskbar-actions { order: 2; }
+        }
+
+        /* view switching */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ============================================================
+           CHATBOT — climate-anxiety support view
+           ============================================================ */
+        .chat-wrap { max-width: 780px; margin: 0 auto; position: relative; z-index: 1; }
+        .chat-panel {
+            background: var(--panel); backdrop-filter: blur(16px); border: 1px solid var(--hairline);
+            border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+            display: flex; flex-direction: column; height: 78vh; min-height: 480px;
+        }
+        .chat-header {
+            padding: 18px 22px; border-bottom: 1px solid var(--hairline);
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
+        .chat-title { font-family: var(--f-display); font-size: 18px; font-weight: 600; color: var(--primary); }
+        .chat-sub { font-size: 11.5px; color: var(--text-muted); font-family: var(--f-mono); margin-top: 3px; }
+        .chat-key-row { display: flex; align-items: center; gap: 6px; }
+        .chat-key-row input {
+            font-family: var(--f-mono); font-size: 11.5px; padding: 7px 10px; border-radius: var(--radius-sm);
+            border: 1px solid var(--hairline); background: var(--panel-solid); color: var(--text); width: 190px; outline: none;
+        }
+        .chat-key-row button {
+            font-family: var(--f-mono); font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: var(--radius-sm);
+            border: 1px solid var(--hairline-strong); background: transparent; color: var(--accent); cursor: pointer;
+        }
+        .chat-key-row button:hover { background: var(--accent); color: #fff; }
+        .chat-key-status { font-size: 10px; font-family: var(--f-mono); color: var(--text-muted); }
+        .chat-key-status.set { color: var(--good); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+        .msg { max-width: 82%; padding: 11px 15px; border-radius: 14px; font-size: 13.5px; line-height: 1.55; }
+        .msg.bot { align-self: flex-start; background: var(--accent-soft); color: var(--text); border-bottom-left-radius: 4px; }
+        .msg.user { align-self: flex-end; background: var(--primary); color: var(--bg-1); border-bottom-right-radius: 4px; }
+        .msg.system-note {
+            align-self: center; background: transparent; border: 1px dashed var(--hairline-strong);
+            color: var(--text-muted); font-family: var(--f-mono); font-size: 11px; text-align: center;
+        }
+        .msg.crisis {
+            align-self: stretch; max-width: 100%; background: rgba(178,84,46,0.1);
+            border: 1px solid var(--unhealthy); color: var(--unhealthy);
+        }
+        .msg.crisis b { display: block; margin-bottom: 4px; }
+        .typing-dots { display: inline-flex; gap: 4px; align-self: flex-start; padding: 11px 15px; }
+        .typing-dots span {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+            animation: typingBounce 1.1s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:.5;} 30%{transform:translateY(-4px);opacity:1;} }
+        .chat-input-row {
+            display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--hairline);
+        }
+        .chat-input-row textarea {
+            flex: 1; resize: none; border: 1px solid var(--hairline); border-radius: var(--radius-sm);
+            padding: 11px 14px; font-family: var(--f-body); font-size: 13.5px; background: var(--panel-solid);
+            color: var(--text); outline: none; max-height: 90px;
+        }
+        .chat-input-row textarea:focus { border-color: var(--accent); }
+        .chat-send-btn {
+            background: var(--primary); color: var(--bg-1); border: none; border-radius: var(--radius-sm);
+            padding: 0 20px; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s;
+        }
+        .chat-send-btn:hover { opacity: 0.85; }
+        .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .chat-quick-prompts { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 14px; }
+        .chat-quick-prompts button {
+            font-size: 11.5px; font-family: var(--f-mono); padding: 6px 12px; border-radius: 999px;
+            border: 1px solid var(--hairline); background: var(--panel-solid); color: var(--text-secondary); cursor: pointer;
+        }
+        .chat-quick-prompts button:hover { border-color: var(--accent); color: var(--accent); }
+        .chat-disclaimer {
+            text-align: center; font-size: 10px; color: var(--text-muted); font-family: var(--f-mono);
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader-overlay" id="loader">
+        <div class="loader-ring"></div>
+        <div class="loader-text" id="loaderText">Gathering atmospheric data</div>
+        <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar-wrap">
+        <div class="taskbar">
+            <div class="taskbar-brand">
+                <div class="taskbar-logo"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAFAAUADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9U6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKTNRzTpApZ2CqO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" alt="logo"></div>
+                <div class="taskbar-name">Cloude.</div>
+            </div>
+            <div class="taskbar-nav">
+                <button class="taskbar-link active" id="navDashboard" onclick="showView('dashboard')">
+                    <span class="tb-icon">🌤️</span> Dashboard
+                </button>
+                <button class="taskbar-link" id="navChatbot" onclick="showView('chatbot')">
+                    <span class="tb-icon">💬</span> Chatbot
+                </button>
+            </div>
+            <div class="taskbar-actions">
+                <button class="taskbar-signin">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="view active" id="dashboardView">
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="brand">
+                <div class="logo"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAFAAUADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9U6KKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKTNRzTpApZ2CqOpY4FAbEtFctqPxF0nTp/LLtN6tEMj86ypvjBpsT4FvIy+pdRW8aFWSuomDr01o2d9RXn/wDwunQo2xMXi+hDY/I1s6V8RtA1lwltqMJc/wALNg0SoVY6uLBV6b2kdPRTI5VkXKkEeoNPrA2TvsFFFFAwooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiq9/fQ6dayXE7iOKNSzMaNXohNpK7KOu+IbbQLUy3ByxzsjX7zGvGPFXjrUNbmP7xUhz8qDp+A7/AFpvjLxdL4h1CRvuxA7VTuqf/XrlJpGnfDnavbFfSYTBKCU57nz+KxUpvkg9AeV5XLMWkf8AOoGtRu3mPr6ircUUaL8pJPvTTHnOB+tesklojzNb6lWYxlCDFF/3x1rLvbeNyrRosUgOQ6kqQfUEVsvbZUkZ/HmqM9s4BOBgc4I4qt9xWZqeG/iVrHhW4jQ3b3Nv3SXJBFe5+CviZp/i0LCreRd4yUbo3+6a+aZIYm/6YknOQcpTIJrvRrpLm2do5kO5WRq4MRgqdZe6rM66GKnRe90fZauDTq8z+GHxUt/FUH2O9lSLUoyFCngycfzr0pTkV8vVpSoycJH0lOqqseaI6iiisjYKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAEJryv4w+LksolsEcEqd7qO5/hFemX93HYWk1xKcJGhdifQDNfLWtanN4iv59QuDkSuWjU+meM16eAo+1qcz2R5uMrckeVbsfHOwjOeWblj9adG/PQCoUT5eefU1CyklsYAHU5r6i1j5t6Gg0iqMsRUbTRnHG6qmBt3EMR6kcVEb/AGEARgj2FA76Ggsg7Ar+NDPwwIyPfnNU0uEmIB+UnsasbcDBJA9O1A0yhPaW0vbyCe4GQarzWE8K5OJY+zRnpWrJBkblOSOxpjLsyU4J5254NNEsxEb7PPHPCxhmQj94vB9j9a+q/AGuv4j8KWF7N/r2TbJjuw4J/SvmW4tluB5gHzH8M1738ELlJ/BEUanmGZ4yO45rx8zgnTUutz1Mvk1Uceh6DRRRXzZ9EFFJmloAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKY8gQZJwO9Ar2HU0yKvVgK808Y/Giz0iSW00tEvblDtZy3yKfT3rynVfHWta8zG81GcRknEMJ2D6EivRoYGrW1eiPPrY2nT0jqz6XuNasLXPnXkEeP70gFYk/xM8NWzMsmrQrt4J5x+eK+ZpM3LHaXUd8Esx/E0xNN8xuUlcjoZXJr0Fla6yOJ5jJ7RPcviF8TfD+oeFL60sNTS4ubhfKVIQSeevbpjNeOk+ZtAGFAAHsKqtpHO4RLu9yamRJoxtYJj/exXo4fDRw6aTOGrWdeV5E63CZZc4IpFuo14GMjkGq0kaBhvZUPcUoVVHyFdvbnNdhztXHtFJOCzOxVu0dSx2ce3mNvxNRrP5YA+Ye6irKThxnZuHY0hED2sRckAhaUqVAA+cfyqY7WIUb0J7EVGY3QkrJ19qQWSJEddo5Hp83WkdRID3HtUUkjHBOGx3I5qBroqCMAfhiiwrXJflDNkgKffFeifCzx3pXhfS7+G+mdXe43KiITgbRzXlpm3yES5CH0PWrMYdFHzbh2O0VjWoxrx5JbG1KtKjLmR9ER/FzwxJHu/tEI2PuujA/yqRfiloDKCt2XyM/Kpr57Ez7SfOcL7IMfyphk2j5ZVP8AvLj+Ved/ZlPud39o1Ox9GW/xG0G4faLzaf8AaGK17HxDp2oyGO2vIppB1VW5r5Ul1ONCQY2JH8SVNY63NbOJbaVtynOHOG/A1E8rjb3ZalwzGV/eR9bBs9KAc14Lovxd1W08sy3C3EYwGinHP4MK9N8OfEfStf2IJfs10ePJlPU+x715FbCVaT1R6dLFU6uiep11FIDkZpa5DsCiiigAooooAKKKKACiiigAoopCcUALRTDJt61E2oWykgzxqfQuKdm9ibosUVRk1qwiKhr2BSxwAZF5P51BeeJ9KsI99xqFvGvQEyCjll2FzxXUdr+vWnhzTpr28lEcMQz7t7D1NeB+N/ipqniwy2lirWFiD86Bv3kgP949h7CrfxG8St4u8QMsDltOsxthwfld+7VyL2q282wc5UKW9T3r6HCYSMUp1FqeFi8S5Pli9CtZWqQrvRN0/wDdHQVdWzDDL8k8nHFMUrbg78CMHGfU02SUuMsSq9sivaR5dkSkpGpCckdAKrvfODtbKY7AVG8mCA7lc9CvGaicqP735ZqgtqSvfNkCPe5PoM1GWllYg5TvkinKWKnaCPwxTzHcIodEAAGSW70DGJHnO4lmHdhTZCSeAqr6AZqR5/O/uhu9U9zrIeGIB7UCuSHfn5Wx9RRulX0/OmeeoGSGH1FI8kcmMkjHagm9idbt8YYY/wCBZpftHrlT9aqGJCpKsDj0anxxfaAYydpx8p96QblwyZXO4n8aquyvyAd30p0IfyzkBmXg9KPNdesamq2GQ7yHCspYH+E9Kl/fW5DxSDySQMMc49qXiQgtDtI7q1TqC48sq2G4HFIVrkqwXZHG0euDTbu3mRVV2DK3WtJYyoVQc4HO4YNQXsXmRZUnenI96VyjEIMbFJQpI6EDBoaQbsY/SprpEOHOcHg+qmodiyjCnDjp709xCqzDJQ/NjOM9ans7t5dpRtkgOSuMZ/Hsag2hwMcgdR6VFJFJC3mxtlv1FDSasCbWqPcPhn8VluwmmarLlwQkdw3Bz2Vvf3r1tTuGa+QJJPNgivYXCOhw+P6/SvoD4ReM28TaAkNw+68tgEbPUj1r5nHYVU37SGx7uDxXN+7nuegUUgORS1457AUUUUAFFFFABTS2M1T1fVLbSLKS6uZBHEgySe/sPevKfEvj671xGigLWVlj5lU4dh/tN2HsK6KNCdZ+7sc1WtGlud/rfxA0jQ9ySXHn3A/5YW/zt/8AWrzvXvjXqEzPHpthHajoJLht7f8AfIrhDuuZTkiK3H3UXj8zSrcW9u4SNHnmY4CoM17dPAU6estTxqmMqVNFogvtZ1rW5JJbzV7khjyoYqo+grJMMgY4lcj+8Sef1rvdA8A3uuhbjU2azt0PyQL95h6n0rpD8PdDxtkSRh7yEYrZ4jD0nZIzjQrTV7njyoWzmRifYmoJEm8zC+YD67s17JdfC7SJYyI5LmEnoyvkD8K8t17RR4a1uazN99qUEMHxjr2roo16VZ2iY1KU6e5DphkYHcxUhsk9zVyYB+M4Y9MelQKRCrNtOOpwKfAryhs8hhn6D0rqZzsjEZzhsM44GOgHtS+Wq8dfeptq8EklB/CvXNNdQTxkfWgTKwhMZ+VN6+npSbVGGUbe+WqRkPQZqNoyedpc49KZK1HedubI+b3PFSCcKOVH0c/yquLVmH+rI9zT49PXOZQSPyFMqw2aeKbAESsR/cFQGLd/A0QHckirMiWyYywQ9jH1qo4ySI5Jf+BnigF5jxaKTn7Q+enzAEVDNbJ/z3iGPVcUs1tJGVZiZVYccYFVpbZQ24/Ln2FMHqI0SRt8x59VNHnIvKtnHUHg/WmBVVhtJI+masw8AYiVj7imFieOeH5mkjVyeSTRJeWh48n8jTfLLZDLEn1OKkS3jU5BiyPQ0hvQjjuLZmCrE2ewzWtbW6xYdiC/YZ6VWQqBwu4+wqXr6j8Km4J3LTv1zyKrsSM4JpS7dMkA/wCzUE8bAFhIMe/FFhkFzCGJbHzHqOxqhIPKbsOeVPUVM7FyQoZz/sjNQvZu/MoKr6njFUtBMC2P3g5/vCpYmDAp2blc/rVeBkikAJ3KQQTnP0qdAQA/Xa/59jSJJLLYkjxMu2OUlSvvXUfB7W/7G8WRxOTsl+Vh9eD+uK5m4iImlK5BwGU+9S+HJTHr9ndKepzkfnWNaCqU5RZrRk41E0fW6fdFOqG0fzbWJ+m5Af0qaviXofYJ3VwooopDCmswAOTgetOrnvHusf2L4Wv7hTiTZ5af7zcCqjHmaRMpcsWzzTxj4pk8S6lLEhAsLdyIx/ePQt/hXJ6nd7VEKHgcsKsRAQxKOCEUsx9cVgS3BuJnJ4yetfW0Kfs4qKPl6tR1JNsn8wycAMw6DsK9F8G+D4bW1ivpxi4f5lTH3BXMeBNJbVtX84x5t7c5x2z/APWr0nVtXg0a0e6uGyEXCr03H0rlxdWSfsoG2HpqznMuXt/DYWzT3MixRL1JrzLX/iVc30+zRQ0af89WUZ/XpWZr3iO78Vz/ACs0NkMkRoSM9vyqvFaxQR7VQAAYxjilQwkY2lPcuriZPSGxDcalrGon/TtQnnBPMSSFE/TrTIIIo+WWNSOwGSfxptzdKpwAVUcAVWVtzbtuR65r1YwjD4VY89yb3ZbMjtuXaPLPGepFTW8SuMAHAzxnkmqyzqi4CgH1qMFn/wCWzg+i1RJNKJB05Poq5qs8kq8NET/tuf6UjzRKAvmSAeg4qJrrHyhS/o2eadiW+w8OC5yzKfcfypDcHPEzcetVnvTv2t8mTwWBFLlipxKrKe64p2GlYlkuZG4E7YPYCoXjeUY3O4+uKY+4dyTTVuZFOC2BQFyX7Gw4JKg9wamijSEbgxGOcmoUuGk/izjtmn7g3DK4PsKAGSXLSEET4yOB6CmGFyeW8wH+9UjLBjkOPqtRCKFiczD2G2nYaJ0tZMZwNo6gUMqLhSGLZ5AbpUDRAjhj/wB9UixTKflY4P8AtUMTv0NFIrUgYj/77XmnNCFb5FRPo3/1qzTbXLZIl59CRUkaXbqCGV2HqKRNi2UdR1U/iaiM7oxCKXP+yM1CPtasdyRk/wB1ScU5jJ/GgC+imgFoON1cSdXCDvgZqK5uFiYeYjTN2FOdwD8owO5PJpI/JycHJPduaLFjFlnchtv2OPsOpNQTIJRjlj6sc1NcsqjlsehNV4y0qHGNv9400SxRGYQcAD3PrUwLEE9VHf1qCK3VvnI3Dpk+tX4IzM4UdOpoYiYrvkZjzhcmm+FoTLq9lEoySzEAfWpLkeXDIRgZ+UH2rW+Gumvf+NrdEXC2yDdj1Jyaxqy5abZpTTclY+lrNDHaQqeCqAfpU1IvAFLXxD1PsVsFFFFIYVxXxdgMngq6cAkRSRyHHoG5rtaztf01dY0e8snHE0bL+OOK0py5ZpmdRc0GkfOd9cqdqAj94nGfYg1jSvsty3fzWX9amvFNrdrBLlZIt0bA9iDiq18CvmxY5yHA/DrX2dOySZ8lK6bud54GRYbKWQSmGVXOCDkAZxyKz/GOpy63qdvZk4tLePdLtP3mPP8AI1F4f1eJrLbGYreQIA0j5y45HX2PNVZYGfUpz9oSbYgUyLkhiB1rkVP965NHQ5/u+VMLZQI2IXaM4AHp2FNlJ+bgsvcCoYLo+eCwCruGB7etSXib33g7gex6V22OVuyM+7/fSKASo7nvUyxrGm3bx6mq8q/OcYX6CniZjGCwOPWqM7jtqHpkVA0eHPzZPvTxKp6HikllULg4PpQNu5DLEWB3JnA/hNVirLwrOh9DV5TDIwI+X6GkePaxIcHHdhzVFbEMIdeXw3HUimLBExGUAHOD0yatFCozt3e4pTLuULlQPRlouLmKFzbqpBRcccgMaiQN/wA9ZFHoOcVqoEKYOQc5zimSKqSAjLjuQv8AOlce5Vt2LFgrK/ruSrGHQZKRj6ZFOCIJCVHWkuNxAUfK3XmmL0K+7DHcx/ClLRDBLuf+A0xlcHJk/IUincf9YT+FV0KJfkZSQFYe4pu/byoH0FHkr1Bdj6U9Y3P/ACybH1FTcV0M85T/AMs+frTo1ZjlVKn1BqZbKSQZKqvpupv2ZxngZ+tANjlLxtkn8xTvPYkbQjN6sKb5c2doBz6gU9LaXrn/AL6FRdiSJP3rkZCMfY1OIorePlEJJ6jrUCo0fLIrY5GTS3Lj5HKFeevrTFtuRyRrMSuFK+jHNUrjREJLRptbHRWIq+8yxpvcoF9ScGi3vYHyDkjsytnFUO19jIZpE+R8kDjaeDWtZrHFABGwYtySKmuLOOaPJdS2OD3rMFncQzkIME9W7AUC5Se5kxOzcGKDBYnozH7q/nXq/wAEvD7WiTXk2HlflmJycn0rzCyaFJ4vMVysWWC9QZOzH1xXrPgb4jaDptumn3DtZS95J/uufr2rzMc5um4wR6OFUFUTkz1QdKWq1rew3cKywSLLGwyGU5BqwK+V20Z9ImnsLRRRQMKRulLSEZFAmfNHxegi07x3eGPCK6pIR/tEc/nXPTymUQ3C/NhSrgd67T4x6cP+E4n8wZSe1V0b0I//AFV5/Z3DW0qg/PExx0r7DCO9KJ8nXX72SK10WjZIlJMRYyDB9RWpHfSWSRQRvtJBJ47YqpdlTNAI8EE/XHNO1AFmbaMnAUYrtsc97FuKaZS2/wDeY9BirAvnOFKkL2waz4Jrl1X92FwMHJ61ILgAfNjd7HilYC1I+W3etRBQwIDcemaWKcOSp+XA71M0SmMnr9KRBHbqY35GR6065ZOAUyfWo1YK3X9aXzGzgtgdqAIwIS6/ueM88Gh4413EM8f45FTBc9z+FLtIU4fA+lO47kENwyIv73dx3WrMckUg+bk1HFIAi5xwPQVPHIGFNj0FO1F+UEL+dQySZGMN+VWDhjwWx6YpwiDdSRUj3M0ybec4+opkszS4aPOR+taJt0HDMc+/NRLEnlr0yT6VVx7GaXLffJjPoRmpYYUILbifx4q24xIcR7gO/Sql1h2GxgrKc46Z9qA3Rci+UDB4qeOMht4BOR61jpqTR5DRMAPUVKNT3kADH4UrC2NSU5A6gjt1qPew42lqqLeN/dz9akF45/gxn0FILolM8iMAsfPqTQ01yegUfjQHZxkkj8KXaT0oJKzQ3khGXQe5NRiKSIOWlLA9cnIq40LNyXwPc1BPNCkJij3TSvwfQU0il5lErukOVJB/iHSnJCoYEfIR3xQ9zv6kZHDoO59aaDJKu1GAA52mqSKLQv5rcYbEqeq84qa3uRP0Y8djVBQCf+eUg6g8Zp4TB8xDvA4IA5oJbNZMnODgnvSuqyjy7hVmj9xVe2uCcI2c9iatM3HTNQNaGx4R1+78GXS/Y53msZDloWOQvtXu3hvxNbeI7NZoGw4Hzxk8qa+cIptnygd84rsNA1t9Hv1vYSU2kedGOjKTjNeTjMLGa547npYbEuD5W9D3jNLUFrMLiJJF+6wBFT1811PoU7q4UUUUDPJvjdoUsi2mrRRl0iDQykfwg9D+deJwxINOljcHcJMDnuBjNfXeoWMV/aywToJIpFKsp7ivmbxV4Ym8NaxeWcgO0SebE395D0NfQ5dXTj7OW58/jqLjP2i6nMoMAyDnYwU+3NaMcfVmycngCqU+BLt6B2zVuCXJMZ6joa9w8on8vaMgvgc4p6hZ1O9VZT6jmnRDf1IA6ZNSiMjg4zSuCKX2RQSAGUei80jOyEqTg+lWmDLnHHvms+6l3ONpLN3pEvckdQR0z9Kaiv8Awqy/Uio1N0V4XA+tOUSjhyfx5qhqxL55jHzn6dKbLcq3SMkmmiFU6w7/AKcYprMoG3Yy+2KLDshftH/TACiO4KHhdue2adFGshxuC/U1O0PoM/SmSyeGYmI5cqPTGad5gPWTj/dqGPdEB0YflT2nx2IqBxHYVek3X14phRVXAZT9GFQMHOfkH4jNQOrDlkQE9guKC07lsuyYHlq4/wB7Jp63FuwI27T3BFUlZlUbWVT6CmOAf9aVHfK5FVYC9iL+FF/WnKjOflwv0ANNgaJoVI29PvHmpQkbYzMg/wB0YpbBchkgCnLYJ9cYqM3ToNqoc+qjNXDDCBnzmb2zmmPNHCm2OQDj+NcYpCauUzNcpyUEnv8AdoNzPg5REz0JNBuGDHMcZHruqOS8TurD6c1SROzAqZcCRmlP90fKKcYZQnymNE6bFP8AOqzXMLH5mce5FC+U54kDexNUyhXiBAVlUY/iFVZFeBskBkPQr1FXUtww+WQr7E1HdW0fksxOW7bT3pXJZEsyuFyxx0GakidozKn8QGcfSmC3Bs0bIDs36ZpI2dJBkkMBtIHQimCNCNo54gw4bHrU8dwThD97IH196qWw8qTH8BPyj396mQbboLnlSD+dQ0WWoUJnw45VsN9K29H/AHkgDsSG3RY9scfrWasW+6dsgfKOtaOlsFlicdHmJGPTbWU9rFLc9s+Ht6b3w5AGJZo/l3GunrjfhWS/heNyAN0j4I7gHGa7KvjqySqSsfV0W3BXCiiisTYQjNcz418FQeK7RQX8m5jz5cmM/ga6eiqjJwlzR3IlFTVmfLvjL4f61osbyS2TMkLbxPD8ylff0rFRN8aSL825ecV9bz2yXEbI6hlYYII4Ir558T+GH8Ma1PbSR+XbSOWt3Xoyk9PqOmK+kweN9r7k9zwMThPZe/HY5aLeGwvUjGDV1CSnK7PXvVWUbbtgoIYfw5/WtCJlcAE/NXq3R5xXlJCgbhnrxyMVAFUk5Xk9xVu6hX76ckcEe1UijphoyJENK9xWDylHTKnuSalWMkcNimLMpJOMjuKJGDrlePpTIe48qy9sn6VGy555+i0iXbxZDHzAOmOtWIb2F8j7h9GpjTuRLC6BsYZTyN2OKiCJk5wT65q+zROB8wb6GoJDbEE8Nj8aRVkRKAeMt+FO8rvzj3FM3wkcM6k9B1qdI98eI5wz9aBdSIjcO+R6monVjkHAqcM6nDBgfbmmsSXIwTjrmgdim3DbWZl/DrVa4nQSKiHzGPatGWJZ1w27b04OKrwmK1BSNFQd8jOfqapCT6BErRIqOQ2ehHY1J5s0QKjkehUGmFkC9FxngCnRzKWCglfp1pNBbUs27LIuWR0I/wBkUyVJDuwWYH1pPNaMcnP+9zQJY3YbyrE/X+lBRTkUq2ZIQewJqMlOoCj6VpGOFhgxll78VXmsoFb5I2x7UyfUp/bMnB6e60PNDIoGAz564xxVxdPV/uq3/AmxUT26xuVUqSOw+agRVy2eAB9DUojypJVQvQ4NTeWEGXbYvoo5NRzSxgHCZOOM00O1iG6mGwqNrH+FRTbeNkjDMMIByTxSoQp3kqSewHSlklef5ADs7k9T9KBXJraYySAldyluB/SrkJ8y8LdSq5P9KrREWwDY+Y8Ko7Vcs18hMtyzHcx9Paky0Xw21mGc5GK1Il+zW8TDpDAxK46E8CsuyjWa4BY/KnzGuj0awk1fULGx2lmuZVeTHZB61zVpKEbs1pxcpJI9i8DWbWHhfT4mGG8oMfqef61v1HDGIY1RfuqABUlfGylzSbPq4LlikFFFFSWFFFFABXP+L/CVt4s0/wAic7JEO6KUdUaugpDVRk4PmjuTKKmrM+avFHhe/wDC10q38I8n7q3UXKN7H0NZscRbmNwe/XFfTWo6Xb6rbPb3USzQtwUbpXl+u/BMiYyaPdCIEkmKbOB9CK9/D46Mly1dPM8Kvg5J3hsed4lJBKAkd6rzQTRESQx5z96Mnr9K6C8+HnizTy26xNyo/ihlBBFZRs9XtGKXGl3qNn7vkk/qK9JVqT2kcEqU47oylnjZ2ZQcHqD1BpJWCjci89SDVy90vUpEMo0m6VV5LPEV/WsuRbhiwKmNlGSpHH1raMlLVMxcWt0BuWBJUEj0204SRSDJwT6MCKha4QrieIK3ZgKQpEw6yDPo3StLg3YsbY8cMB9DUUpkj/1bDHuOtQNlTxM2Pdc03ew6ygj/AGlxQK9yWG7mRQJIYnx1Kkg1YS7Xhk3Iw7HrVD7Vh8Ag/QZqf7QsaBpCEHqwp2GjTjnE0Y9VIzVyAALnueTWJa3Ykfy4o2lYjOFQnitK2vMHY0ckco6KUIz+dZtq9rhctyR4B5XaOzCqkjtLhAkLKfzqyJZJVwcIe4IqFMmUBSpPf5OaEMZJbTIpKKI/XAFVWhmnbbK7RjPIQ4/WtQIe5J+tDgbeTx71VwKEWiwuThXf/eY1bTSYYUbCYOOOauWg/d8VIxyMdfpUN3YGELdyxwR+NSrHIg/hz9aneFAT5i7STxk0fZkIP7tx7g1TE1cz7hZW4LkcdAOKpSRyAYyR/umttoDjoSPfmoPsoAIxj/dppitYyPJk/i3H6kmk8ksP4mb0VTirs8KCTARicehNRtFIyYLsgHY96pDsQC3Yj51KYqQEQr95Rx2600DDYQtJ9BU8Onl2DOOfVucUNkvQbbpJM6v09ARzWkqIkZy2Mck1CGjg4LEnrVuwsX1GUNkLAhy7noPb3NZydhrVl3SIt0bSMuIgfn759BXrXwv0CRIZNXuU2S3BxEpH3U7fnXO+DfBUmtvHJLH5OmQsGCkYaY/4V7DHGsSKiKFUDAA6CvnsdiU/3cfme7g8O178h9FFFeKj2AooopgFFFFABRRRQAUUUUAFNZAxp1FAmrkUtuk8ZjkUOh6gjIrz7xX8JbfU3efTpPsszHcYz9zPt6V6NRWtOtOk7wZlUpQqK0kfMGt+Hr3RblrXUbUxyDo2PlceqmsY2Fqc/MYn/uscYr6s1HSrXVrdoLyCO4ibqrjNeU+K/hJJazPcaWPMtyOYG+Zl+ma96hmEZ6VNGeLWwUoaw1R5IbJAcCRW9w+KQW+zlYN3uZK7BPCGpJLt+ylAeM+RzWppnwl1G/l/0lPJT0dcZFd7xNNbs4VRqN2SPO1iluvkihD54wmCB+NdB4Y+Gt94inGy2CRZ/wBcckD869e0j4VW1sE+0ymVFwAg6V21hp0GmwCG3jEcY6Ba86vmUUrU9z0KOBk2nUMHwl4DsfCtnsiQSTsPnlccn29qt634P0vxDbGG8tVcdnX5WU+oIrdorwXVnKfO3qewqNNK1jw/xF8MNW0Nnms1Op2YPIB/egfTvXEi6y7R8b+QY5htYV9SlQawNc8CaJ4iJa9sIpJT/wAtFGG/MV61HMZR0qK559XApu8GfOreYAQFVT6jJpFg3tl3LYOduzA/nXrN58CrRyfsmqXVuvZWAcCs4fA/Uo2OzWoyvYtFzXofX6D6nA8HWXQ8/EkmxlOOf7nb8abvAwp80E8b14zXqOm/By5jbF3qYKDtEnJ/E11ui/DzSNFfzEhNxL/fnO79OlZzzClFaamkMDUlvoeCrbhkJcTFcZJde1ONt5agRyEqegb/ABr6VfToHTaYIiD2KCuR1T4X2MszzWIjgL/ehkQNGfoOo/CsoZlGT95WNJ4CSXu6nhs0wtyfMc8DPNVzqCTA+Uyvj0avaI/hzdxL5ey1aM/eGOMflWdefBiG6kc/ZrZQf4gcEV1LH0XuzleEq9jx2S4uC5JUqMfwg1G2X/1glb2Kk16rL8Eb2Ag2t1GgH8LMarn4RazGOUSX6TAVssbR/mM3hqq6Hnduky/diIX1dguKtQ2VxclQuZWJ4WJf5mvQLT4T6wrcWdpER/FNJvJrotN+FVzNtGpX6og6xWi7QfxrOWOopbmkcHUk9jzOz0ISypE8X2q6PS0g5APuRXpfhf4bSyrHNq4CJ1W1j4C+xrttG8L6foMZWzt0jJ6vjLH8TWqoxXi18dOekNEerRwcYay1GQ26wRqiKEVRgKowBUgGKWivMueilYKKKKYwooooAKKKKACiiigAooooAKKKKACiiigApCAevNLRQA3ZzRtp1FACAYpaKKACiiigAooooAKKKKACiiigAooooAQjNGOKWigVhuPbNLtHoKWigLCbRQABS0UrDCiiimAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH//2Q==" alt="Cloude cloud logo"></div>
+                <div class="brand-text">
+                    <div class="title">Cloude.</div>
+                    <div class="subtitle">Project REACH · Environment Station</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="search-box">
+                    <span style="color:var(--text-muted);font-size:12px;">⌕</span>
+                    <input type="text" id="citySearch" placeholder="Search city…" onkeypress="if(event.key==='Enter')searchCity()">
+                    <button onclick="searchCity()">→</button>
+                </div>
+                <div class="loc-pill" id="locPill">📍 Detecting…</div>
+                <div class="live-pill"><div class="live-dot"></div> Live</div>
+                <button class="icon-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh">↻</button>
+                <button class="icon-btn" onclick="toggleDark()" title="Toggle theme">◐</button>
+            </div>
+        </div>
+
+        <div class="error-box" id="errorBox">
+            <strong>⚠ Error</strong> — <span id="errorMsg">Something went wrong.</span>
+            <button onclick="loadAll()" style="margin-left:12px;background:var(--unhealthy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer;">Retry</button>
+            <button onclick="dismissError()" style="margin-left:6px;background:transparent;color:var(--unhealthy);border:1px solid var(--unhealthy);border-radius:6px;padding:4px 12px;font-weight:600;cursor:pointer;">Dismiss</button>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="panel hero-main" id="heroMain">
+                <div class="eyebrow">Current Reading</div>
+                <div class="hero-top">
+                    <div>
+                        <div class="hero-temp" id="heroTemp">--<span class="unit">°C</span></div>
+                        <div class="hero-condition" id="heroCondition">Loading…</div>
+                        <div class="hero-feels" id="heroFeels">Feels like --°C</div>
+                    </div>
+                    <div class="hero-emoji" id="heroEmoji">☁️</div>
+                </div>
+                <div class="hero-details">
+                    <div class="hero-detail">
+                        <div class="d-label">Humidity</div>
+                        <div class="d-value" id="heroHum">--%</div>
+                    </div>
+                    <div class="hero-detail">
+                        <div class="d-label">Wind</div>
+                        <div class="d-value" id="heroWind">-- km/h</div>
+                    </div>
+                    <div class="hero-detail">
+                        <div class="d-label">Visibility</div>
+                        <div class="d-value" id="heroVis">-- km</div>
+                    </div>
+                    <div class="hero-detail">
+                        <div class="d-label">Pressure</div>
+                        <div class="d-value" id="heroPress">-- hPa</div>
+                    </div>
+                    <div class="hero-detail">
+                        <div class="d-label">Precipitation</div>
+                        <div class="d-value" id="heroPrecip">-- mm</div>
+                    </div>
+                    <div class="hero-detail">
+                        <div class="d-label">Cloud Cover</div>
+                        <div class="d-value" id="heroCloud">--%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizon gauge: signature element, replaces two flat sunrise/sunset bars -->
+            <div class="panel horizon-card">
+                <div class="eyebrow">Horizon</div>
+                <svg class="horizon-arc" viewBox="0 0 300 170">
+                    <path id="horizonTrack" d="M 22 150 A 128 128 0 0 1 278 150" fill="none" stroke="var(--hairline)" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round"/>
+                    <path id="horizonProgress" d="M 22 150 A 128 128 0 0 1 278 150" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-dasharray="0 1000"/>
+                    <line x1="22" y1="150" x2="278" y2="150" stroke="var(--hairline)" stroke-width="1"/>
+                    <circle id="sunMarker" cx="22" cy="150" r="6" fill="var(--accent)" stroke="var(--panel-solid)" stroke-width="2"/>
+                </svg>
+                <div class="horizon-times">
+                    <div class="ht">
+                        <span class="ht-label">Sunrise</span>
+                        <span class="ht-value" id="sunriseTime">--:--</span>
+                    </div>
+                    <div class="ht">
+                        <span class="ht-label">Sunset</span>
+                        <span class="ht-value" id="sunsetTime">--:--</span>
+                    </div>
+                </div>
+                <div class="horizon-sub" id="horizonSub">—</div>
+            </div>
+        </div>
+
+        <!-- 7-Day Forecast -->
+        <div class="section-title">
+            <span class="st-main">Seven-Day Outlook</span>
+            <span class="st-line"></span>
+            <span class="st-tag">Trace · Max/Min</span>
+        </div>
+        <div class="forecast-row" id="forecastRow"></div>
+
+        <!-- Environment Cards -->
+        <div class="section-title">
+            <span class="st-main">Environment Readouts</span>
+            <span class="st-line"></span>
+            <span class="st-tag" id="updateTagline">—</span>
+        </div>
+        <div class="grid" id="envGrid"></div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Powered by <span>Anxothotl</span> under <span>Project REACH</span> · Data via Open-Meteo · <span id="updateTime"></span>
+        </div>
+    </div>
+    </div>
+    <!-- /dashboardView -->
+
+    <!-- Chatbot View -->
+    <div class="view" id="chatbotView">
+        <div class="chat-wrap">
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <div>
+                        <div class="chat-title">Climate Companion</div>
+                        <div class="chat-sub">A space to talk through eco-anxiety · Project REACH</div>
+                    </div>
+                    <div class="chat-key-row">
+                        <input type="password" id="grokApiKey" placeholder="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" autocomplete="off">
+                        <button onclick="saveGrokKey()">Save</button>
+                    </div>
+                </div>
+                <div class="chat-key-row" style="padding: 0 22px 10px; justify-content: flex-end;">
+                    <span class="chat-key-status" id="keyStatus">No key set — get one at console.x.ai</span>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="msg bot">
+                        Hi, I'm here to listen. Climate change can bring up a lot — grief, fear, anger,
+                        overwhelm, or numbness. Whatever you're feeling is valid. Tell me what's on your mind,
+                        or pick a prompt below to start.
+                    </div>
+                </div>
+
+                <div class="chat-quick-prompts">
+                    <button onclick="sendQuickPrompt('I feel hopeless about climate change lately.')">I feel hopeless</button>
+                    <button onclick="sendQuickPrompt('The news about climate disasters is overwhelming me.')">News overwhelm</button>
+                    <button onclick="sendQuickPrompt('What can I actually do that matters?')">What can I do?</button>
+                    <button onclick="sendQuickPrompt('How do I talk to my kids about climate change?')">Talking to kids</button>
+                </div>
+
+                <div class="chat-input-row">
+                    <textarea id="chatInput" rows="1" placeholder="Share what's on your mind…" onkeydown="handleChatKeydown(event)"></textarea>
+                    <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+            <div class="chat-disclaimer">
+                Climate Companion is a supportive space, not a substitute for professional mental health care.
+                Your API key is kept only in this browser tab and is never stored or sent anywhere but x.ai.
+            </div>
+        </div>
+    </div>
+
+<script>
+// ===================== CONFIG =====================
+const CONFIG = {
+    fallbackLat: 28.6139, fallbackLon: 77.2090, fallbackCity: "New Delhi, India"
+};
+
+let currentLat = CONFIG.fallbackLat, currentLon = CONFIG.fallbackLon, currentCity = CONFIG.fallbackCity;
+let cachedWeather = null, cachedAir = null;
+
+// ===================== HELPERS =====================
+function getAQIStatus(aqi) {
+    if (aqi <= 50) return { status: 'good', label: 'Good', color: '#4f9d6e' };
+    if (aqi <= 100) return { status: 'moderate', label: 'Moderate', color: '#d0a13f' };
+    if (aqi <= 150) return { status: 'unhealthy', label: 'Unhealthy (Sens.)', color: '#cd6c48' };
+    if (aqi <= 200) return { status: 'unhealthy', label: 'Unhealthy', color: '#b2542e' };
+    if (aqi <= 300) return { status: 'severe', label: 'Very Unhealthy', color: '#8a6bb0' };
+    return { status: 'severe', label: 'Hazardous', color: '#6e4f8f' };
+}
+function getTempStatus(t) {
+    if (t <= 20) return { status: 'good', label: 'Cool' };
+    if (t <= 30) return { status: 'good', label: 'Pleasant' };
+    if (t <= 35) return { status: 'moderate', label: 'Warm' };
+    if (t <= 40) return { status: 'unhealthy', label: 'Hot' };
+    return { status: 'unhealthy', label: 'Extreme Heat' };
+}
+function getHumStatus(h) {
+    if (h < 30) return { status: 'moderate', label: 'Dry' };
+    if (h <= 60) return { status: 'good', label: 'Comfortable' };
+    if (h <= 75) return { status: 'moderate', label: 'High' };
+    return { status: 'unhealthy', label: 'Very High' };
+}
+function getUVStatus(uv) {
+    if (uv <= 2) return { status: 'good', label: 'Low' };
+    if (uv <= 5) return { status: 'moderate', label: 'Moderate' };
+    if (uv <= 7) return { status: 'moderate', label: 'High' };
+    if (uv <= 10) return { status: 'unhealthy', label: 'Very High' };
+    return { status: 'unhealthy', label: 'Extreme' };
+}
+function getWindStatus(w) {
+    if (w < 5) return { status: 'moderate', label: 'Calm' };
+    if (w <= 20) return { status: 'good', label: 'Breezy' };
+    if (w <= 40) return { status: 'moderate', label: 'Windy' };
+    return { status: 'unhealthy', label: 'Gale' };
+}
+function getVisStatus(v) {
+    if (v >= 10) return { status: 'good', label: 'Excellent' };
+    if (v >= 5) return { status: 'moderate', label: 'Moderate' };
+    if (v >= 2) return { status: 'moderate', label: 'Poor' };
+    return { status: 'unhealthy', label: 'Very Poor' };
+}
+function getPressStatus(p) {
+    if (p >= 1013) return { status: 'good', label: 'Normal' };
+    if (p >= 1000) return { status: 'moderate', label: 'Low' };
+    return { status: 'unhealthy', label: 'Very Low' };
+}
+function getDewStatus(d, t) {
+    const diff = t - d;
+    if (diff > 5) return { status: 'good', label: 'Comfortable' };
+    if (diff > 2) return { status: 'moderate', label: 'Sticky' };
+    return { status: 'unhealthy', label: 'Oppressive' };
+}
+function getCloudStatus(c) {
+    if (c < 20) return { status: 'good', label: 'Clear' };
+    if (c < 60) return { status: 'moderate', label: 'Partly Cloudy' };
+    if (c < 90) return { status: 'moderate', label: 'Cloudy' };
+    return { status: 'unhealthy', label: 'Overcast' };
+}
+function getPrecipStatus(p) {
+    if (p === 0) return { status: 'good', label: 'Dry' };
+    if (p < 2) return { status: 'moderate', label: 'Light' };
+    if (p < 10) return { status: 'moderate', label: 'Moderate' };
+    return { status: 'unhealthy', label: 'Heavy' };
+}
+function getWMOcode(code) {
+    const codes = {
+        0: ['Clear sky', '☀️'], 1: ['Mainly clear', '🌤️'], 2: ['Partly cloudy', '⛅'], 3: ['Overcast', '☁️'],
+        45: ['Fog', '🌫️'], 48: ['Depositing rime fog', '🌫️'],
+        51: ['Light drizzle', '🌦️'], 53: ['Moderate drizzle', '🌦️'], 55: ['Dense drizzle', '🌧️'],
+        56: ['Light freezing drizzle', '🌨️'], 57: ['Dense freezing drizzle', '🌨️'],
+        61: ['Slight rain', '🌧️'], 63: ['Moderate rain', '🌧️'], 65: ['Heavy rain', '⛈️'],
+        66: ['Light freezing rain', '🌨️'], 67: ['Heavy freezing rain', '🌨️'],
+        71: ['Slight snow', '🌨️'], 73: ['Moderate snow', '❄️'], 75: ['Heavy snow', '❄️'],
+        77: ['Snow grains', '🌨️'], 80: ['Slight rain showers', '🌦️'], 81: ['Moderate rain showers', '🌧️'],
+        82: ['Violent rain showers', '⛈️'], 85: ['Slight snow showers', '🌨️'], 86: ['Heavy snow showers', '❄️'],
+        95: ['Thunderstorm', '⛈️'], 96: ['Thunderstorm with hail', '⛈️'], 99: ['Thunderstorm with heavy hail', '⛈️']
+    };
+    return codes[code] || ['Unknown', '❓'];
+}
+function getDayName(dateStr) {
+    const d = new Date(dateStr);
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return days[d.getDay()];
+}
+function formatTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true});
+}
+// Open-Meteo's air-quality API has no "daily" endpoint, so we average the
+// hourly values ourselves to get a per-day figure for the forecast strip.
+function getDailyAvg(hourlyTimes, hourlyValues, dateStr) {
+    if (!hourlyTimes || !hourlyValues) return null;
+    let sum = 0, count = 0;
+    for (let i = 0; i < hourlyTimes.length; i++) {
+        if (hourlyTimes[i].startsWith(dateStr) && hourlyValues[i] !== null && hourlyValues[i] !== undefined) {
+            sum += hourlyValues[i];
+            count++;
+        }
+    }
+    return count ? sum / count : null;
+}
+
+// ===================== SOLUTIONS =====================
+const solutions = {
+    aqi: {
+        good: '<ul><li>Perfect day for outdoor exercise!</li><li>Open windows for fresh air</li><li>Great for jogging, cycling, or picnics</li></ul>',
+        moderate: '<ul><li>Sensitive people: limit prolonged outdoor exertion</li><li>Watch for coughing or throat irritation</li><li>Keep indoor plants for natural air purification</li></ul>',
+        unhealthy: '<ul><li>Wear <strong>N95/KN95</strong> mask outdoors</li><li>Use HEPA air purifiers indoors</li><li>Keep windows closed; use AC on recirculate</li><li>Avoid morning/evening walks (pollution peaks)</li><li>Asthma patients: keep inhaler handy</li></ul>',
+        severe: '<ul><li><strong>Stay indoors</strong> as much as possible</li><li>Seal windows and doors with wet towels</li><li>Use multiple air purifiers</li><li>Wear N95 even indoors if levels are extreme</li><li>Seek medical help if experiencing breathing difficulty</li></ul>'
+    },
+    temp: {
+        good: '<ul><li>Enjoy the pleasant weather!</li><li>Ideal for all outdoor activities</li><li>Perfect temperature for studying outdoors</li></ul>',
+        moderate: '<ul><li>Drink water regularly (2.5–3L daily)</li><li>Wear light cotton clothes</li><li>Take shade breaks if outdoors for long</li></ul>',
+        unhealthy: '<ul><li><strong>Hydrate</strong> with ORS/electrolyte water</li><li>Avoid sun 12 PM – 4 PM</li><li>Wear wide-brimmed hat & UV sunglasses</li><li>Never leave kids/pets in parked cars</li><li>Watch for heat exhaustion: dizziness, nausea</li></ul>'
+    },
+    humidity: {
+        good: '<ul><li>Comfortable — no special precautions</li></ul>',
+        moderate: '<ul><li>Use dehumidifier or exhaust fans</li><li>Wear moisture-wicking fabrics</li><li>Stay in AC when possible</li></ul>',
+        unhealthy: '<ul><li>Avoid strenuous outdoor activities</li><li>Take cool showers frequently</li><li>Use AC on dry/cool mode</li><li>Drink fluids with electrolytes</li><li>Watch for heat rash and fungal infections</li></ul>'
+    },
+    uv: {
+        good: '<ul><li>Minimal protection needed</li><li>Sunglasses still good for eye comfort</li></ul>',
+        moderate: '<ul><li>Apply <strong>SPF 30</strong> sunscreen</li><li>Wear sunglasses & hat</li><li>Seek shade 11 AM – 3 PM</li></ul>',
+        unhealthy: '<ul><li>Apply <strong>SPF 50+</strong> broad-spectrum</li><li>Reapply every 2 hours</li><li>UV400 sunglasses mandatory</li><li>Full sleeves & long pants</li><li>Avoid tanning — high skin damage risk</li></ul>'
+    },
+    spf: {
+        good: '<ul><li>SPF 15+ 15 mins before going out</li><li>Reapply if outdoors >2 hours</li></ul>',
+        moderate: '<ul><li>Use <strong>SPF 30</strong> minimum</li><li>Apply generously — most use too little</li><li>Reapply every 2 hours</li></ul>',
+        unhealthy: '<ul><li>Use <strong>SPF 50+</strong> on all exposed skin</li><li>Reapply every 90 mins–2 hours</li><li>Don\'t forget ears, neck, hands, feet</li><li>Combine with hat & umbrella</li></ul>'
+    },
+    wind: {
+        good: '<ul><li>Perfect for outdoor sports</li><li>Great ventilation — open windows</li></ul>',
+        moderate: '<ul><li>Secure loose balcony items</li><li>Wear cap or tie hair back</li><li>Be cautious cycling against wind</li></ul>',
+        unhealthy: '<ul><li>Stay indoors — flying debris risk</li><li>Avoid trees & construction sites</li><li>Keep emergency supplies ready</li></ul>'
+    },
+    visibility: {
+        good: '<ul><li>Excellent visibility for driving</li><li>Great for photography & sightseeing</li></ul>',
+        moderate: '<ul><li>Use fog lights if driving</li><li>Reduce speed in low visibility</li></ul>',
+        unhealthy: '<ul><li><strong>Avoid driving</strong> if possible</li><li>Use low beam headlights</li><li>Stay indoors until visibility improves</li></ul>'
+    },
+    pressure: {
+        good: '<ul><li>Stable weather — no concerns</li></ul>',
+        moderate: '<ul><li>Weather may change — stay updated</li><li>Some may experience mild headaches</li></ul>',
+        unhealthy: '<ul><li>Storm or severe weather likely</li><li>Secure outdoor items</li><li>Keep emergency kit ready</li></ul>'
+    },
+    dewpoint: {
+        good: '<ul><li>Comfortable dew point</li><li>No special precautions</li></ul>',
+        moderate: '<ul><li>May feel slightly sticky</li><li>Use fans for air circulation</li></ul>',
+        unhealthy: '<ul><li>Very uncomfortable conditions</li><li>Stay in air-conditioned spaces</li><li>Hydrate frequently</li></ul>'
+    },
+    cloud: {
+        good: '<ul><li>Clear skies — enjoy the sunshine!</li><li>Great for solar energy generation</li></ul>',
+        moderate: '<ul><li>Partly cloudy — pleasant weather</li><li>Good for outdoor activities</li></ul>',
+        unhealthy: '<ul><li>Overcast skies — may affect mood</li><li>Ensure adequate indoor lighting</li><li>Vitamin D levels may drop — consider supplements</li></ul>'
+    },
+    precip: {
+        good: '<ul><li>No rain expected — dry day!</li></ul>',
+        moderate: '<ul><li>Carry an umbrella or raincoat</li><li>Drive carefully on wet roads</li></ul>',
+        unhealthy: '<ul><li><strong>Heavy rain warning</strong></li><li>Avoid waterlogged areas</li><li>Stay indoors if possible</li><li>Check for flood alerts</li></ul>'
+    }
+};
+
+function getSol(key, status) {
+    return (solutions[key] && solutions[key][status]) ? solutions[key][status] : '<ul><li>Stay aware of changing conditions</li></ul>';
+}
+
+// ===================== RENDER CARDS =====================
+function renderEnvCard(key, label, value, unit, icon, status, statusLabel, desc, extraHTML = '') {
+    return `
+        <div class="card ${status}">
+            <div class="card-header">
+                <div class="card-icon">${icon}</div>
+                <div class="badge ${status}">${statusLabel}</div>
+            </div>
+            <div class="label">${label}</div>
+            <div class="value">${value}<span class="unit">${unit}</span></div>
+            <div class="desc">${desc}</div>
+            ${extraHTML}
+            <div class="solution">
+                <div class="solution-title">Prevention &amp; Solution</div>
+                <div class="solution-text">${getSol(key, status)}</div>
+            </div>
+            <div class="timestamp">Updated ${new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})}</div>
+        </div>
+    `;
+}
+
+function renderEnvGrid(weather, airQuality) {
+    const cards = [];
+    const cur = weather.current;
+    const daily = weather.daily;
+    const air = airQuality.hourly;
+
+    // AQI
+    const pm25 = air.pm2_5 ? air.pm2_5[0] : 50;
+    const pm10 = air.pm10 ? air.pm10[0] : 80;
+    const aqi = Math.round(pm25 * 1.5);
+    const aqiInfo = getAQIStatus(aqi);
+    const aqiPct = Math.min(aqi / 300 * 100, 100);
+    cards.push(renderEnvCard('aqi', 'Air Quality Index', aqi, '', '🌫️', aqiInfo.status, aqiInfo.label,
+        `PM2.5: ${pm25} µg/m³ · PM10: ${pm10} µg/m³`,
+        `<div class="aqi-bar"><div class="aqi-fill" style="width:${aqiPct}%;background:${aqiInfo.color};"></div></div><div class="aqi-legend"><span>0</span><span>150</span><span>300+</span></div>`
+    ));
+
+    // Temperature
+    const temp = Math.round(cur.temperature_2m);
+    const tempInfo = getTempStatus(temp);
+    cards.push(renderEnvCard('temp', 'Temperature', temp, '°C', '🌡️', tempInfo.status, tempInfo.label,
+        `Feels like ${Math.round(cur.apparent_temperature)}°C. ${tempInfo.label} conditions.`
+    ));
+
+    // Humidity
+    const hum = cur.relative_humidity_2m;
+    const humInfo = getHumStatus(hum);
+    cards.push(renderEnvCard('humidity', 'Humidity', hum, '%', '💧', humInfo.status, humInfo.label,
+        humInfo.label + ' humidity levels detected.'
+    ));
+
+    // UV
+    const uv = daily.uv_index_max ? Math.round(daily.uv_index_max[0]) : 5;
+    const uvInfo = getUVStatus(uv);
+    let uvDots = '';
+    for (let i = 1; i <= 11; i++) {
+        const c = i <= 2 ? '#4f9d6e' : i <= 5 ? '#d0a13f' : i <= 7 ? '#cd6c48' : '#b2542e';
+        uvDots += `<div class="uv-dot ${i===uv?'active':''}" style="background:${c};opacity:${i<=uv?1:0.2}">${i}</div>`;
+    }
+    cards.push(renderEnvCard('uv', 'UV Index', uv, '', '☀️', uvInfo.status, uvInfo.label, uvInfo.label + ' UV exposure risk.',
+        `<div class="uv-dots">${uvDots}</div>`
+    ));
+
+    // SPF
+    const spfVal = uv <= 2 ? 15 : uv <= 5 ? 30 : uv <= 7 ? 50 : 50;
+    const spfStatus = uv <= 2 ? 'good' : uv <= 5 ? 'moderate' : 'unhealthy';
+    const spfLabel = uv <= 2 ? 'Minimal' : uv <= 5 ? 'Recommended' : uv <= 7 ? 'High' : 'Critical';
+    cards.push(renderEnvCard('spf', 'Recommended SPF', spfVal, '+', '🧴', spfStatus, spfLabel,
+        `SPF ${spfVal}+ needed for current UV level of ${uv}.`
+    ));
+
+    // Wind
+    const wind = Math.round(cur.wind_speed_10m);
+    const windInfo = getWindStatus(wind);
+    cards.push(renderEnvCard('wind', 'Wind Speed', wind, ' km/h', '💨', windInfo.status, windInfo.label,
+        `Wind direction: ${cur.wind_direction_10m}°. ${windInfo.label} breeze.`
+    ));
+
+    // Visibility
+    const vis = Math.round(cur.visibility / 1000);
+    const visInfo = getVisStatus(vis);
+    cards.push(renderEnvCard('visibility', 'Visibility', vis, ' km', '👁️', visInfo.status, visInfo.label,
+        visInfo.label + ' visibility conditions.'
+    ));
+
+    // Pressure
+    const press = Math.round(cur.surface_pressure);
+    const pressInfo = getPressStatus(press);
+    cards.push(renderEnvCard('pressure', 'Atmospheric Pressure', press, ' hPa', '📊', pressInfo.status, pressInfo.label,
+        pressInfo.label + ' atmospheric pressure.'
+    ));
+
+    // Dew Point
+    const dew = Math.round(cur.dew_point_2m);
+    const dewInfo = getDewStatus(dew, temp);
+    cards.push(renderEnvCard('dewpoint', 'Dew Point', dew, '°C', '💦', dewInfo.status, dewInfo.label,
+        `Difference from temp: ${temp - dew}°C. ${dewInfo.label} comfort level.`
+    ));
+
+    // Cloud Cover
+    const cloud = cur.cloud_cover;
+    const cloudInfo = getCloudStatus(cloud);
+    cards.push(renderEnvCard('cloud', 'Cloud Cover', cloud, '%', '☁️', cloudInfo.status, cloudInfo.label,
+        cloudInfo.label + ' skies. Cloud cover at ' + cloud + '%.'
+    ));
+
+    // Precipitation
+    const precip = cur.precipitation;
+    const precipInfo = getPrecipStatus(precip);
+    cards.push(renderEnvCard('precip', 'Precipitation', precip, ' mm', '🌧️', precipInfo.status, precipInfo.label,
+        precipInfo.label + ' rainfall expected.'
+    ));
+
+    // Pollen (simulated)
+    const month = new Date().getMonth();
+    const isPollen = (month >= 2 && month <= 5) || (month >= 8 && month <= 10);
+    const pollenVal = isPollen ? Math.round(40 + Math.random()*50) : Math.round(5 + Math.random()*20);
+    const pollenStatus = pollenVal > 60 ? 'unhealthy' : pollenVal > 30 ? 'moderate' : 'good';
+    const pollenLabel = pollenVal > 60 ? 'High' : pollenVal > 30 ? 'Moderate' : 'Low';
+    cards.push(renderEnvCard('pollen', 'Pollen Count', pollenVal, ' /m³', '🌸', pollenStatus, pollenLabel,
+        pollenLabel + ' pollen levels.'
+    ));
+
+    document.getElementById('envGrid').innerHTML = cards.join('');
+}
+
+// ===================== HERO =====================
+function renderHero(weather) {
+    const cur = weather.current;
+    const daily = weather.daily;
+    const [wmoDesc, wmoEmoji] = getWMOcode(cur.weather_code);
+
+    document.getElementById('heroTemp').innerHTML = Math.round(cur.temperature_2m) + '<span class="unit">°C</span>';
+    document.getElementById('heroCondition').textContent = wmoDesc;
+    document.getElementById('heroFeels').textContent = `Feels like ${Math.round(cur.apparent_temperature)}°C · ${getDayName(new Date().toISOString())}`;
+    document.getElementById('heroEmoji').textContent = wmoEmoji;
+
+    document.getElementById('heroHum').textContent = cur.relative_humidity_2m + '%';
+    document.getElementById('heroWind').textContent = Math.round(cur.wind_speed_10m) + ' km/h';
+    document.getElementById('heroVis').textContent = Math.round(cur.visibility / 1000) + ' km';
+    document.getElementById('heroPress').textContent = Math.round(cur.surface_pressure) + ' hPa';
+    document.getElementById('heroPrecip').textContent = cur.precipitation + ' mm';
+    document.getElementById('heroCloud').textContent = cur.cloud_cover + '%';
+
+    // Sunrise / Sunset
+    const sunrise = formatTime(daily.sunrise[0]);
+    const sunset = formatTime(daily.sunset[0]);
+    document.getElementById('sunriseTime').textContent = sunrise;
+    document.getElementById('sunsetTime').textContent = sunset;
+
+    const now = new Date();
+    const sr = new Date(daily.sunrise[0]);
+    const ss = new Date(daily.sunset[0]);
+    const dayProgress = Math.max(0, Math.min(100, ((now - sr) / (ss - sr)) * 100));
+
+    // Move the sun marker along the horizon arc to match day progress.
+    try {
+        const track = document.getElementById('horizonTrack');
+        const progressPath = document.getElementById('horizonProgress');
+        const marker = document.getElementById('sunMarker');
+        const totalLen = track.getTotalLength();
+        const frac = dayProgress / 100;
+        const pt = track.getPointAtLength(frac * totalLen);
+        marker.setAttribute('cx', pt.x);
+        marker.setAttribute('cy', pt.y);
+        progressPath.setAttribute('stroke-dasharray', `${frac * totalLen} ${totalLen}`);
+    } catch (e) { /* SVG geometry unsupported — arc stays static, times still show */ }
+
+    const hrsToSunset = Math.max(0, (ss - now) / 3600000);
+    const h = Math.floor(hrsToSunset);
+    const m = Math.round((hrsToSunset - h) * 60);
+    document.getElementById('horizonSub').textContent = now < sr
+        ? 'Before sunrise'
+        : now > ss
+            ? 'Night — day complete'
+            : `${Math.round(dayProgress)}% of daylight elapsed · ${h}h ${m}m to sunset`;
+}
+
+// ===================== FORECAST =====================
+function renderForecast(weather, airQuality) {
+    const daily = weather.daily;
+    const airHourly = airQuality.hourly;
+    let html = '';
+    const scaleMin = 5, scaleMax = 45;
+
+    for (let i = 0; i < 7; i++) {
+        const date = daily.time[i];
+        const dayName = i === 0 ? 'Today' : getDayName(date);
+        const [desc, emoji] = getWMOcode(daily.weather_code[i]);
+        const maxT = Math.round(daily.temperature_2m_max[i]);
+        const minT = Math.round(daily.temperature_2m_min[i]);
+        const pm25Avg = airHourly ? getDailyAvg(airHourly.time, airHourly.pm2_5, date) : null;
+        const aqi = pm25Avg !== null ? Math.round(pm25Avg * 1.5) : 50;
+        const aqiInfo = getAQIStatus(aqi);
+
+        const maxPct = Math.min(100, Math.max(0, (maxT - scaleMin) / (scaleMax - scaleMin) * 100));
+        const minPct = Math.min(100, Math.max(0, (minT - scaleMin) / (scaleMax - scaleMin) * 100));
+
+        html += `
+            <div class="forecast-day">
+                <div class="fd-range"><div class="fd-range-fill" style="bottom:${minPct}%;height:${Math.max(4, maxPct - minPct)}%;"></div></div>
+                <div class="fd-name">${dayName}</div>
+                <div class="fd-icon">${emoji}</div>
+                <div class="fd-temp">${maxT}° <span class="fd-temp-low">/ ${minT}°</span></div>
+                <div class="fd-desc">${desc}</div>
+                <div class="fd-aqi" style="background:${aqiInfo.color}22;color:${aqiInfo.color}">AQI ${aqi}</div>
+            </div>
+        `;
+    }
+    document.getElementById('forecastRow').innerHTML = html;
+}
+
+// ===================== API =====================
+async function fetchWithTimeout(url, ms = 12000) {
+    // NOTE: deliberately not using AbortController/signal here. Some preview
+    // sandboxes proxy fetch() to the parent window via postMessage, and an
+    // AbortSignal can't be structured-cloned across that boundary, which
+    // throws "AbortSignal object could not be cloned" and kills the request
+    // before it even goes out. A plain Promise.race times out safely without
+    // needing to pass a special object into fetch's options.
+    const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timed out')), ms)
+    );
+    return Promise.race([fetch(url), timeout]);
+}
+
+async function fetchData(lat, lon) {
+    // Fixed API URLs with proper parameters
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,visibility,dew_point_2m&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
+
+    const airUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=pm10,pm2_5&forecast_days=7&timezone=auto`;
+
+    // Weather is required. Air quality is fetched separately and is allowed
+    // to fail without taking down the whole dashboard — we fall back to
+    // empty air data and the UI shows sensible defaults for those fields.
+    let wRes;
+    try {
+        wRes = await fetchWithTimeout(weatherUrl);
+    } catch (err) {
+        throw new Error('Could not reach the weather service (' + err.message + ')');
+    }
+    if (!wRes.ok) {
+        const errorText = await wRes.text().catch(() => '');
+        throw new Error(`Weather API Error (${wRes.status}): ${errorText.slice(0,200)}`);
+    }
+    const weather = await wRes.json();
+    if (!weather.current || !weather.hourly || !weather.daily) {
+        throw new Error('Weather API returned an unexpected response shape');
+    }
+
+    let air = { hourly: { time: [], pm10: [], pm2_5: [] } };
+    try {
+        const aRes = await fetchWithTimeout(airUrl);
+        if (aRes.ok) {
+            air = await aRes.json();
+        } else {
+            console.warn('Air quality API returned', aRes.status);
+        }
+    } catch (err) {
+        console.warn('Air quality fetch failed, continuing without it:', err.message);
+    }
+
+    return { weather, air };
+}
+
+async function getCityName(lat, lon) {
+    try {
+        const res = await fetchWithTimeout(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`, 6000);
+        const data = await res.json();
+        return data.city || data.locality || data.principalSubdivision || 'Your Location';
+    } catch (e) {
+        console.log('City name lookup failed, using coordinates');
+        return `Location (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+    }
+}
+
+async function searchCity() {
+    const query = document.getElementById('citySearch').value.trim();
+    if (!query) {
+        showError('Please enter a city name');
+        return;
+    }
+    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById('loaderText').textContent = 'Searching for ' + query + '…';
+    try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`);
+        const data = await res.json();
+        if (!data.results || !data.results.length) {
+            showError('City not found. Please try again.');
+            document.getElementById('loader').classList.add('hidden');
+            return;
+        }
+        const r = data.results[0];
+        currentLat = r.latitude;
+        currentLon = r.longitude;
+        currentCity = r.name + (r.country ? ', ' + r.country : '');
+        await loadAll();
+    } catch (e) {
+        showError('Search failed. Please check your connection.');
+        document.getElementById('loader').classList.add('hidden');
+    }
+}
+
+function showError(msg) {
+    const box = document.getElementById('errorBox');
+    document.getElementById('errorMsg').textContent = msg;
+    box.classList.add('show');
+    // Intentionally not auto-hiding: if something fails, the message should
+    // stay on screen until the person retries or dismisses it, rather than
+    // vanishing before they can read or screenshot it.
+}
+function dismissError() {
+    document.getElementById('errorBox').classList.remove('show');
+}
+
+// ===================== MAIN =====================
+async function loadAll() {
+    const loader = document.getElementById('loader');
+    const locPill = document.getElementById('locPill');
+    loader.classList.remove('hidden');
+    document.getElementById('loaderText').textContent = 'Gathering atmospheric data';
+
+    try {
+        // Try to get location if no manual search was done
+        const searchInput = document.getElementById('citySearch');
+        if (!searchInput.value) {
+            try {
+                if (navigator.geolocation) {
+                    document.getElementById('loaderText').textContent = 'Getting your location';
+                    // Race the browser's geolocation call against our own timer.
+                    // Some embedded/sandboxed browsers silently never call either
+                    // geolocation callback when permission is blocked, which would
+                    // otherwise hang this await forever.
+                    const pos = await new Promise((res, rej) => {
+                        let settled = false;
+                        const hardTimeout = setTimeout(() => {
+                            if (!settled) { settled = true; rej(new Error('Geolocation timed out')); }
+                        }, 6000);
+                        navigator.geolocation.getCurrentPosition(
+                            (p) => { if (!settled) { settled = true; clearTimeout(hardTimeout); res(p); } },
+                            (e) => { if (!settled) { settled = true; clearTimeout(hardTimeout); rej(e); } },
+                            {timeout: 5000}
+                        );
+                    });
+                    currentLat = pos.coords.latitude;
+                    currentLon = pos.coords.longitude;
+                    currentCity = await getCityName(currentLat, currentLon);
+                }
+            } catch(e) {
+                console.log('Using fallback location:', e.message);
+                currentCity = CONFIG.fallbackCity;
+            }
+        }
+
+        locPill.textContent = '📍 ' + currentCity;
+        document.getElementById('loaderText').textContent = 'Fetching weather data';
+
+        const { weather, air } = await fetchData(currentLat, currentLon);
+        cachedWeather = weather;
+        cachedAir = air;
+
+        document.getElementById('loaderText').textContent = 'Rendering dashboard';
+
+        renderHero(weather);
+        renderForecast(weather, air);
+        renderEnvGrid(weather, air);
+
+        const stamp = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('updateTime').textContent = stamp;
+        document.getElementById('updateTagline').textContent = 'Updated ' + stamp;
+
+        // Hide loader with a small delay for smooth transition
+        setTimeout(() => {
+            loader.classList.add('hidden');
+        }, 300);
+
+    } catch (e) {
+        console.error('Error loading data:', e);
+        loader.classList.add('hidden');
+        showError('Failed to load data. Error: ' + e.message + '. Please refresh or try a different city.');
+    }
+}
+
+async function refreshAll() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    await loadAll();
+    setTimeout(() => btn.classList.remove('spinning'), 600);
+}
+
+function toggleDark() {
+    document.body.classList.toggle('dark-mode');
+}
+
+// Init - Run when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadAll();
+});
+
+// ===================== TASKBAR / VIEW SWITCHING =====================
+function showView(view) {
+    document.getElementById('dashboardView').classList.toggle('active', view === 'dashboard');
+    document.getElementById('chatbotView').classList.toggle('active', view === 'chatbot');
+    document.getElementById('navDashboard').classList.toggle('active', view === 'dashboard');
+    document.getElementById('navChatbot').classList.toggle('active', view === 'chatbot');
+}
+
+// ===================== CLIMATE COMPANION CHATBOT (Grok API) =====================
+// The key lives only in memory for this tab/session — never persisted to
+// localStorage/sessionStorage or sent anywhere except directly to the x.ai API.
+let grokApiKey = '';
+let chatHistory = [];
+
+const CLIMATE_SYSTEM_PROMPT = `You are Climate Companion, a warm and grounded support chat for people
+experiencing climate anxiety, eco-grief, or eco-distress. Your goals:
+- Validate feelings without amplifying doom or minimizing real risks.
+- Listen first; ask at most one gentle question at a time.
+- Offer concrete, realistic coping tools when helpful: grounding techniques, limiting doomscrolling,
+  connecting with community/collective action, focusing on what's controllable, tolerating uncertainty.
+- Emphasize that individual and collective action both matter, without guilt-tripping.
+- Keep replies concise (roughly 3-6 sentences) and conversational, not clinical or lecture-like.
+- Never diagnose. If someone describes a mental health crisis or self-harm, gently encourage them to
+  reach out to a crisis line or trusted person, and keep your tone calm and caring.
+- You are not a therapist and should say so if asked directly, while remaining warm and present.`;
+
+// Lightweight client-side safety net: if a message suggests crisis/self-harm,
+// show supportive resources immediately alongside the normal chat flow.
+const CRISIS_PATTERN = /\b(suicid|kill myself|end my life|self[- ]?harm|hurt myself|want to die)\b/i;
+
+function saveGrokKey() {
+    const input = document.getElementById('grokApiKey');
+    grokApiKey = input.value.trim();
+    const status = document.getElementById('keyStatus');
+    if (grokApiKey) {
+        status.textContent = 'Key set for this session ✓';
+        status.classList.add('set');
+    } else {
+        status.textContent = 'No key set — get one at console.x.ai';
+        status.classList.remove('set');
+    }
+}
+
+function appendMessage(role, text) {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = text;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    return div;
+}
+
+function appendCrisisNote() {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'msg crisis';
+    div.innerHTML = '<b>If you\'re in crisis, please reach out right now:</b>' +
+        'US/Canada: call or text 988 · UK: call 111 or text SHOUT to 85258 · ' +
+        'India: AASRA 91-22-27546669 · Or find a local helpline at findahelpline.com. ' +
+        'You deserve support from a real person, not just this chat.';
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function showTyping() {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'typing-dots';
+    div.id = 'typingIndicator';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+function hideTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+}
+
+function handleChatKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+}
+
+function sendQuickPrompt(text) {
+    document.getElementById('chatInput').value = text;
+    sendChatMessage();
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    appendMessage('user', text);
+    chatHistory.push({ role: 'user', content: text });
+
+    if (CRISIS_PATTERN.test(text)) {
+        appendCrisisNote();
+    }
+
+    if (!grokApiKey) {
+        appendMessage('system-note', 'Add your Grok API key above to get a response, or keep sharing — this space is still here.');
+        return;
+    }
+
+    const sendBtn = document.getElementById('chatSendBtn');
+    sendBtn.disabled = true;
+    showTyping();
+
+    try {
+        // NOTE: calling api.x.ai directly from the browser requires the key's
+        // origin/CORS policy to allow it. For production use, proxy this
+        // through your own backend so the key is never exposed client-side.
+        const response = await fetch('https://api.x.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + grokApiKey
+            },
+            body: JSON.stringify({
+                model: 'grok-4-latest',
+                messages: [
+                    { role: 'system', content: CLIMATE_SYSTEM_PROMPT },
+                    ...chatHistory
+                ],
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error('API error ' + response.status + ': ' + errText.slice(0, 200));
+        }
+
+        const data = await response.json();
+        const reply = data.choices && data.choices[0] && data.choices[0].message
+            ? data.choices[0].message.content
+            : "I couldn't quite form a reply there — could you try rephrasing?";
+
+        hideTyping();
+        appendMessage('bot', reply);
+        chatHistory.push({ role: 'assistant', content: reply });
+
+    } catch (err) {
+        hideTyping();
+        console.error('Grok API error:', err);
+        appendMessage('system-note', 'Couldn\'t reach Grok (' + err.message + '). Check your API key and try again.');
+    } finally {
+        sendBtn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>
